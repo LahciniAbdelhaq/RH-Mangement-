@@ -4,7 +4,9 @@ import Dashboard from './pages/Dashboard';
 import Employees from './pages/Employees';
 import Requests from './pages/Requests';
 import LeaveManagement from './pages/LeaveManagement';
+import Calendar from './pages/Calendar';
 import Compliance from './pages/Compliance';
+import Finance from './pages/Finance';
 import Settings from './pages/Settings';
 import Help from './pages/Help';
 import Profile from './pages/Profile';
@@ -13,7 +15,13 @@ import Register from './pages/Register';
 import ForgotPassword from './pages/ForgotPassword';
 import Notifications from './pages/Notifications';
 import NotFound from './pages/NotFound';
+import { useAuth } from './context/AuthContext';
 import { ToastProvider } from './context/ToastContext';
+
+const AdminRoute = ({ children }) => {
+  const { user } = useAuth();
+  return user?.role === 'HR_MANAGER' ? children : <Navigate to="/dashboard" replace />;
+};
 
 function App() {
   return (
@@ -30,7 +38,9 @@ function App() {
             <Route path="employees" element={<Employees />} />
             <Route path="requests" element={<Requests />} />
             <Route path="leave" element={<LeaveManagement />} />
+            <Route path="calendar" element={<AdminRoute><Calendar /></AdminRoute>} />
             <Route path="compliance" element={<Compliance />} />
+            <Route path="finance" element={<AdminRoute><Finance /></AdminRoute>} />
             <Route path="settings" element={<Settings />} />
             <Route path="help" element={<Help />} />
             <Route path="profile" element={<Profile />} />

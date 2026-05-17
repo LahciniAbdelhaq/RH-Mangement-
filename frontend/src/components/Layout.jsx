@@ -4,6 +4,7 @@ import { useTheme } from '../context/ThemeContext';
 import { useAuth } from '../context/AuthContext';
 import { useTranslation } from 'react-i18next';
 import Sidebar from './Sidebar';
+import Chatbot from './Chatbot';
 
 export default function AppLayout() {
   const [collapsed, setCollapsed] = useState(true);
@@ -204,6 +205,7 @@ export default function AppLayout() {
           <Outlet />
         </div>
       </main>
+      {user?.role === 'HR_MANAGER' && <Chatbot />}
     </div>
   );
 }

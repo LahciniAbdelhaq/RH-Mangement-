@@ -52,10 +52,24 @@ const Sidebar = ({ collapsed, setCollapsed }) => {
           {user?.role !== 'EMPLOYEE' && <span className="nav-badge gray">12</span>}
         </NavLink>
 
+        {user?.role === 'HR_MANAGER' && (
+          <NavLink to="/calendar" className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}>
+            <i className="fas fa-calendar-check"></i>
+            <span className="nav-text">{t('sidebar.calendar')}</span>
+          </NavLink>
+        )}
+
         {canSeeCompliance && (
           <NavLink to="/compliance" className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}>
             <i className="fas fa-shield-alt"></i>
             <span className="nav-text">{t('sidebar.compliance')}</span>
+          </NavLink>
+        )}
+
+        {user?.role === 'HR_MANAGER' && (
+          <NavLink to="/finance" className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}>
+            <i className="fas fa-wallet"></i>
+            <span className="nav-text">{t('sidebar.finance')}</span>
           </NavLink>
         )}
 
