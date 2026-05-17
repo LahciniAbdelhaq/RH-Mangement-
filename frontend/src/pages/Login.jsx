@@ -3,42 +3,42 @@ import { Link, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
+import { useTranslation } from 'react-i18next';
 import {
   Mail, Lock, ArrowRight, Loader2,
   Sun, Moon, AlertCircle, ChevronDown
 } from 'lucide-react';
 
-const ROLE_MAP = {
-  'Employé':                   'EMPLOYEE',
-  'Agent RH':                 'HR_AGENT',
-  'Responsable RH':           'HR_MANAGER',
-  'Chef de service':          'DEPARTMENT_MANAGER',
-  'Chef de service intérim': 'INTERIM_MANAGER',
-};
-
 const Login = () => {
   const { login }           = useAuth();
   const { theme, toggleTheme } = useTheme();
   const navigate            = useNavigate();
+  const { t }               = useTranslation();
 
   const [email, setEmail]       = useState('');
   const [password, setPassword] = useState('');
-  const [role, setRole]         = useState('Responsable RH');
+  const [role, setRole]         = useState('HR_MANAGER');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError]       = useState('');
 
-  const roles = Object.keys(ROLE_MAP);
+  const roles = [
+    { id: 'EMPLOYEE', label: t('auth.employee') },
+    { id: 'HR_AGENT', label: t('auth.hrAgent') },
+    { id: 'HR_MANAGER', label: t('auth.hrManager') },
+    { id: 'DEPARTMENT_MANAGER', label: t('auth.manager') },
+    { id: 'INTERIM_MANAGER', label: t('auth.interimManager') }
+  ];
 
   const handleLogin = (e) => {
     e.preventDefault();
     setIsLoading(true);
     setError('');
     setTimeout(() => {
-      const result = login(email, password, ROLE_MAP[role] ?? 'EMPLOYEE');
+      const result = login(email, password, role);
       if (result?.success) {
         navigate('/dashboard');
       } else {
-        setError('Identifiants invalides. Veuillez réessayer.');
+        setError(t('auth.invalidCredentials'));
         setIsLoading(false);
       }
     }, 1200);
@@ -84,13 +84,13 @@ const Login = () => {
             <span style={{ color: '#fff', fontSize: 18, fontWeight: 700, letterSpacing: '-.01em' }}>RH Management</span>
           </div>
           <h1 style={{ color: '#fff', fontSize: 48, fontWeight: 800, lineHeight: 1.15, marginBottom: 20 }}>
-            Bon retour<br /><span style={{ color: '#93c5fd' }}>chez vous.</span>
+            {t('auth.welcomeBack').split('chez vous')[0]}<br /><span style={{ color: '#93c5fd' }}>{t('auth.welcomeBack').includes('chez vous') ? 'chez vous.' : 'home.'}</span>
           </h1>
           <p style={{ color: '#bfdbfe', fontSize: 17, lineHeight: 1.7, maxWidth: 340 }}>
-            Gérez vos équipes, congés et performances depuis une seule plateforme élégante.
+            {t('auth.welcomeBackDesc')}
           </p>
           <div style={{ marginTop: 48, display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 14 }}>
-            {[['2 400+','Employés'],['18','Départements'],['98 %','Satisfaction']].map(([v,l]) => (
+            {[['2 400+', t('auth.activeEmpLabel')],['18', t('auth.deptsLabel')],['98 %', t('auth.satisfactionLabel')]].map(([v,l]) => (
               <div key={l} style={{ background: 'rgba(255,255,255,.1)', backdropFilter: 'blur(8px)', borderRadius: 16, padding: '18px 14px', border: '1px solid rgba(255,255,255,.2)' }}>
                 <div style={{ color: '#fff', fontSize: 22, fontWeight: 800 }}>{v}</div>
                 <div style={{ color: '#bfdbfe', fontSize: 12, marginTop: 4, fontWeight: 500 }}>{l}</div>
@@ -126,7 +126,7 @@ const Login = () => {
 
           <div style={{ marginBottom: 28 }}>
             <h2 style={{ fontSize: 30, fontWeight: 800, color: isDark ? '#f1f5f9' : '#0f172a', marginBottom: 0, letterSpacing: '-.02em' }}>
-              Connexion
+              {t('auth.signIn')}
             </h2>
           </div>
 
@@ -147,11 +147,11 @@ const Login = () => {
             {/* Role */}
             <div>
               <label style={{ display: 'block', fontSize: 13, fontWeight: 700, color: isDark ? '#cbd5e1' : '#374151', marginBottom: 8 }}>
-                Rôle
+                {t('auth.role')}
               </label>
               <div style={{ position: 'relative' }}>
                 <select value={role} onChange={(e) => setRole(e.target.value)} style={selectStyle} required>
-                  {roles.map((r) => <option key={r} value={r} style={{ background: isDark ? '#1e293b' : '#fff', color: isDark ? '#f1f5f9' : '#0f172a' }}>{r}</option>)}
+                  {roles.map((r) => <option key={r.id} value={r.id} style={{ background: isDark ? '#1e293b' : '#fff', color: isDark ? '#f1f5f9' : '#0f172a' }}>{r.label}</option>)}
                 </select>
                 <ChevronDown style={{ position: 'absolute', right: 14, top: '50%', transform: 'translateY(-50%)', width: 16, height: 16, color: isDark ? '#64748b' : '#9ca3af', pointerEvents: 'none' }} />
               </div>
@@ -160,7 +160,7 @@ const Login = () => {
             {/* Email */}
             <div>
               <label style={{ display: 'block', fontSize: 13, fontWeight: 700, color: isDark ? '#cbd5e1' : '#374151', marginBottom: 8 }}>
-                Adresse e-mail
+                {t('auth.email')}
               </label>
               <input
                 type="email"
@@ -178,10 +178,10 @@ const Login = () => {
             <div>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
                 <label style={{ fontSize: 13, fontWeight: 700, color: isDark ? '#cbd5e1' : '#374151' }}>
-                  Mot de passe
+                  {t('auth.password')}
                 </label>
                 <Link to="/forgot-password" style={{ fontSize: 13, fontWeight: 700, color: '#2563eb', textDecoration: 'none' }}>
-                  Oublié ?
+                  {t('auth.forgotPassword').replace(' ?', '').replace('?', '')}
                 </Link>
               </div>
               <input
@@ -208,17 +208,17 @@ const Login = () => {
               onMouseLeave={(e) => { e.target.style.background = '#2563eb'; }}
             >
               {isLoading ? (
-                <><Loader2 style={{ width: 18, height: 18, animation: 'spin 1s linear infinite' }} />Connexion en cours…</>
+                <><Loader2 style={{ width: 18, height: 18, animation: 'spin 1s linear infinite' }} />{t('auth.signingIn')}</>
               ) : (
-                <>Se connecter <ArrowRight style={{ width: 16, height: 16 }} /></>
+                <>{t('auth.signIn')} <ArrowRight style={{ width: 16, height: 16 }} /></>
               )}
             </motion.button>
           </form>
 
           <p style={{ marginTop: 24, textAlign: 'center', fontSize: 14, color: isDark ? '#94a3b8' : '#6b7280' }}>
-            Pas encore de compte ?{' '}
+            {t('auth.noAccount')}{' '}
             <Link to="/register" style={{ fontWeight: 700, color: '#2563eb', textDecoration: 'none' }}>
-              Créer un compte
+              {t('auth.createAccount')}
             </Link>
           </p>
         </motion.div>

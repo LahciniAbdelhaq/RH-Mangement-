@@ -3,11 +3,13 @@ import Modal from '../components/Modal';
 import Pagination from '../components/Pagination';
 import { motion } from 'framer-motion';
 import { useToast } from '../context/ToastContext';
+import { useTranslation } from 'react-i18next';
 import { FileText, Clock, AlertTriangle, CheckCircle2, User, Building2, Calendar, Download } from 'lucide-react';
 import { jsPDF } from 'jspdf';
 
 const Requests = () => {
   const { showToast } = useToast();
+  const { t } = useTranslation();
 
   const handleExportDocument = (row) => {
     let extension = 'txt';
@@ -229,12 +231,12 @@ const Requests = () => {
     <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}>
       <header className="header">
         <div className="header-title">
-          <h1>Gestion des Demandes RH</h1>
-          <p>Approuvez, rejetez et gérez les demandes administratives des employés</p>
+          <h1>{t('requests.title')}</h1>
+          <p>{t('requests.subtitle')}</p>
         </div>
         <div className="header-actions">
           <button className="action-btn primary" onClick={() => setIsModalOpen(true)}>
-            <i className="fas fa-plus"></i> Nouvelle Demande
+            <i className="fas fa-plus"></i> {t('requests.newRequest')}
           </button>
         </div>
       </header>
@@ -243,23 +245,23 @@ const Requests = () => {
       <div style={{ display: 'flex', gap: '24px', marginBottom: '24px', borderBottom: '1px solid var(--border-color)' }}>
         <div 
           onClick={() => setActiveTab('attente')}
-          style={{ fontWeight: activeTab === 'attente' ? 600 : 500, color: activeTab === 'attente' ? 'var(--primary)' : 'var(--text-gray)', borderBottom: activeTab === 'attente' ? '2px solid var(--primary)' : 'none', paddingBottom: '12px', marginBottom: activeTab === 'attente' ? '-1px' : '0', cursor: 'pointer', transition: 'all 0.2s' }}>En Attente (18)</div>
+          style={{ fontWeight: activeTab === 'attente' ? 600 : 500, color: activeTab === 'attente' ? 'var(--primary)' : 'var(--text-gray)', borderBottom: activeTab === 'attente' ? '2px solid var(--primary)' : 'none', paddingBottom: '12px', marginBottom: activeTab === 'attente' ? '-1px' : '0', cursor: 'pointer', transition: 'all 0.2s' }}>{t('requests.tabs.pending')} (18)</div>
         <div 
           onClick={() => setActiveTab('cours')}
-          style={{ fontWeight: activeTab === 'cours' ? 600 : 500, color: activeTab === 'cours' ? 'var(--primary)' : 'var(--text-gray)', borderBottom: activeTab === 'cours' ? '2px solid var(--primary)' : 'none', paddingBottom: '12px', marginBottom: activeTab === 'cours' ? '-1px' : '0', cursor: 'pointer', transition: 'all 0.2s' }}>En Cours (5)</div>
+          style={{ fontWeight: activeTab === 'cours' ? 600 : 500, color: activeTab === 'cours' ? 'var(--primary)' : 'var(--text-gray)', borderBottom: activeTab === 'cours' ? '2px solid var(--primary)' : 'none', paddingBottom: '12px', marginBottom: activeTab === 'cours' ? '-1px' : '0', cursor: 'pointer', transition: 'all 0.2s' }}>{t('requests.tabs.inProgress')} (5)</div>
         <div 
           onClick={() => setActiveTab('terminees')}
-          style={{ fontWeight: activeTab === 'terminees' ? 600 : 500, color: activeTab === 'terminees' ? 'var(--primary)' : 'var(--text-gray)', borderBottom: activeTab === 'terminees' ? '2px solid var(--primary)' : 'none', paddingBottom: '12px', marginBottom: activeTab === 'terminees' ? '-1px' : '0', cursor: 'pointer', transition: 'all 0.2s' }}>Terminées (142)</div>
+          style={{ fontWeight: activeTab === 'terminees' ? 600 : 500, color: activeTab === 'terminees' ? 'var(--primary)' : 'var(--text-gray)', borderBottom: activeTab === 'terminees' ? '2px solid var(--primary)' : 'none', paddingBottom: '12px', marginBottom: activeTab === 'terminees' ? '-1px' : '0', cursor: 'pointer', transition: 'all 0.2s' }}>{t('requests.tabs.completed')} (142)</div>
         <div 
           onClick={() => setActiveTab('rejetees')}
-          style={{ fontWeight: activeTab === 'rejetees' ? 600 : 500, color: activeTab === 'rejetees' ? 'var(--primary)' : 'var(--text-gray)', borderBottom: activeTab === 'rejetees' ? '2px solid var(--primary)' : 'none', paddingBottom: '12px', marginBottom: activeTab === 'rejetees' ? '-1px' : '0', cursor: 'pointer', transition: 'all 0.2s' }}>Rejetées (12)</div>
+          style={{ fontWeight: activeTab === 'rejetees' ? 600 : 500, color: activeTab === 'rejetees' ? 'var(--primary)' : 'var(--text-gray)', borderBottom: activeTab === 'rejetees' ? '2px solid var(--primary)' : 'none', paddingBottom: '12px', marginBottom: activeTab === 'rejetees' ? '-1px' : '0', cursor: 'pointer', transition: 'all 0.2s' }}>{t('requests.tabs.rejected')} (12)</div>
       </div>
 
       <div className="card glass-card" style={{ padding: 0, overflow: 'hidden' }}>
         <div className="table-toolbar" style={{ padding: '20px 24px', borderBottom: '1px solid var(--border-color)', marginBottom: 0 }}>
           <div className="search-bar">
             <i className="fas fa-search"></i>
-            <input type="text" placeholder="Rechercher une demande..." />
+            <input type="text" placeholder={t('requests.search')} />
           </div>
         </div>
 
@@ -268,11 +270,11 @@ const Requests = () => {
             <table>
               <thead>
                 <tr>
-                  <th>Demande</th>
-                  <th>Département</th>
-                  <th>Propriétaire</th>
-                  <th>Soumission</th>
-                  <th style={{ textAlign: 'center' }}>Actions</th>
+                  <th>{t('requests.table.request')}</th>
+                  <th>{t('requests.table.department')}</th>
+                  <th>{t('requests.table.owner')}</th>
+                  <th>{t('requests.table.submitted')}</th>
+                  <th style={{ textAlign: 'center' }}>{t('requests.table.actions')}</th>
                 </tr>
               </thead>
               <tbody>

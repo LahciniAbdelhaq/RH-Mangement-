@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useTheme } from '../context/ThemeContext';
+import { useTranslation } from 'react-i18next';
 import {
   User, Mail, Lock, ArrowRight, Loader2,
   Sun, Moon, AlertCircle, Shield, Zap, Users
@@ -10,6 +11,7 @@ import {
 const Register = () => {
   const { theme, toggleTheme } = useTheme();
   const navigate               = useNavigate();
+  const { t }                  = useTranslation();
 
   const [formData, setFormData] = useState({ prenom: '', nom: '', email: '', password: '' });
   const [isLoading, setIsLoading] = useState(false);
@@ -62,18 +64,18 @@ const Register = () => {
           </div>
 
           <h1 style={{ color: '#fff', fontSize: 48, fontWeight: 800, lineHeight: 1.15, marginBottom: 20 }}>
-            Rejoignez<br /><span style={{ color: '#93c5fd' }}>notre plateforme.</span>
+            {t('auth.joinPlatform').split('notre plateforme')[0]}<br /><span style={{ color: '#93c5fd' }}>{t('auth.joinPlatform').includes('notre plateforme') ? 'notre plateforme.' : 'our platform.'}</span>
           </h1>
           <p style={{ color: '#bfdbfe', fontSize: 17, lineHeight: 1.7, maxWidth: 340 }}>
-            Créez votre compte en moins de 2 minutes et gérez vos ressources humaines efficacement.
+            {t('auth.joinPlatformDesc')}
           </p>
 
           {/* Features */}
           <div style={{ marginTop: 48, display: 'flex', flexDirection: 'column', gap: 16 }}>
             {[
-              { Icon: Users,  title: 'Annuaire centralisé',     desc: 'Tous vos employés en un seul endroit' },
-              { Icon: Zap,    title: 'Analyses en temps réel',   desc: 'Tableaux de bord et rapports avancés' },
-              { Icon: Shield, title: 'Sécurité enterprise',      desc: 'Données chiffrées et accès contrôlés' },
+              { Icon: Users,  title: t('auth.centralizedDirectory'),     desc: t('auth.centralizedDirectoryDesc') },
+              { Icon: Zap,    title: t('auth.realtimeAnalytics'),   desc: t('auth.realtimeAnalyticsDesc') },
+              { Icon: Shield, title: t('auth.enterpriseSecurity'),      desc: t('auth.enterpriseSecurityDesc') },
             ].map(({ Icon, title, desc }) => (
               <div key={title} style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
                 <div style={{ width: 42, height: 42, background: 'rgba(255,255,255,.1)', borderRadius: 12, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, border: '1px solid rgba(255,255,255,.2)' }}>
@@ -115,7 +117,7 @@ const Register = () => {
 
           <div style={{ marginBottom: 20 }}>
             <h2 style={{ fontSize: 30, fontWeight: 800, color: isDark ? '#f1f5f9' : '#0f172a', marginBottom: 8, letterSpacing: '-.02em' }}>
-              Créer un compte
+              {t('auth.createAccount')}
             </h2>
           </div>
 
@@ -135,8 +137,8 @@ const Register = () => {
             {/* Name row */}
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
               {[
-                { name: 'prenom', label: 'Prénom', placeholder: 'Jean',   icon: User },
-                { name: 'nom',    label: 'Nom',    placeholder: 'Dupont', icon: User },
+                { name: 'prenom', label: t('employees.form.firstName'), placeholder: 'Jean',   icon: User },
+                { name: 'nom',    label: t('employees.form.lastName'),    placeholder: 'Dupont', icon: User },
               ].map(({ name, label, placeholder, icon: Icon }) => (
                 <div key={name}>
                   <label style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 13, fontWeight: 700, color: isDark ? '#cbd5e1' : '#374151', marginBottom: 8 }}>
@@ -162,7 +164,7 @@ const Register = () => {
             <div>
               <label style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 13, fontWeight: 700, color: isDark ? '#cbd5e1' : '#374151', marginBottom: 8 }}>
                 <Mail style={{ width: 14, height: 14, color: '#2563eb' }} />
-                Adresse e-mail
+                {t('auth.email')}
               </label>
               <input
                 name="email"
@@ -181,12 +183,12 @@ const Register = () => {
             <div>
               <label style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 13, fontWeight: 700, color: isDark ? '#cbd5e1' : '#374151', marginBottom: 8 }}>
                 <Lock style={{ width: 14, height: 14, color: '#2563eb' }} />
-                Mot de passe
+                {t('auth.password')}
               </label>
               <input
                 name="password"
                 type="password"
-                placeholder="Minimum 8 caractères"
+                placeholder={t('auth.minPasswordLength')}
                 value={formData.password}
                 onChange={handleChange}
                 autoComplete="new-password"
@@ -196,7 +198,7 @@ const Register = () => {
                 onBlur={onBlur}
               />
               <p style={{ marginTop: 6, fontSize: 12, color: isDark ? '#64748b' : '#9ca3af', paddingLeft: 2 }}>
-                Au moins 8 caractères avec lettres et chiffres.
+                {t('auth.passwordReq')}
               </p>
             </div>
 
@@ -209,17 +211,17 @@ const Register = () => {
               style={{ marginTop: 4, width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10, background: '#2563eb', color: '#fff', fontWeight: 700, fontSize: 15, padding: '15px 24px', borderRadius: 12, border: 'none', cursor: isLoading ? 'not-allowed' : 'pointer', opacity: isLoading ? 0.7 : 1, boxShadow: '0 4px 14px rgba(37,99,235,.35)', fontFamily: 'inherit' }}
             >
               {isLoading ? (
-                <><Loader2 style={{ width: 18, height: 18, animation: 'spin 1s linear infinite' }} />Création du compte…</>
+                <><Loader2 style={{ width: 18, height: 18, animation: 'spin 1s linear infinite' }} />{t('auth.creatingAccount')}</>
               ) : (
-                <>Créer mon compte <ArrowRight style={{ width: 16, height: 16 }} /></>
+                <>{t('auth.signUpBtn')} <ArrowRight style={{ width: 16, height: 16 }} /></>
               )}
             </motion.button>
           </form>
 
           <p style={{ marginTop: 24, textAlign: 'center', fontSize: 14, color: isDark ? '#94a3b8' : '#6b7280' }}>
-            Vous avez déjà un compte ?{' '}
+            {t('auth.hasAccount')}{' '}
             <Link to="/login" style={{ fontWeight: 700, color: '#2563eb', textDecoration: 'none' }}>
-              Se connecter
+              {t('auth.signIn')}
             </Link>
           </p>
         </motion.div>

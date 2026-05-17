@@ -1,4 +1,5 @@
 import React from 'react';
+import { useTranslation } from 'react-i18next';
 
 /**
  * Pagination component
@@ -8,6 +9,7 @@ import React from 'react';
  * @param {function} onPageChange - callback(pageNumber)
  */
 const Pagination = ({ currentPage, totalItems, itemsPerPage = 5, onPageChange }) => {
+  const { t } = useTranslation();
   const totalPages = Math.max(1, Math.ceil(totalItems / itemsPerPage));
 
   const firstItem = totalItems === 0 ? 0 : (currentPage - 1) * itemsPerPage + 1;
@@ -28,7 +30,7 @@ const Pagination = ({ currentPage, totalItems, itemsPerPage = 5, onPageChange })
   return (
     <div className="pagination-bar">
       <span className="pagination-info">
-        Affichage {firstItem} à {lastItem} sur {totalItems} entrées
+        {t('common.showingEntries', { first: firstItem, last: lastItem, total: totalItems })}
       </span>
 
       <div className="pagination-controls">
@@ -37,7 +39,7 @@ const Pagination = ({ currentPage, totalItems, itemsPerPage = 5, onPageChange })
           onClick={() => onPageChange(currentPage - 1)}
           disabled={currentPage === 1}
         >
-          Précédent
+          {t('common.previous')}
         </button>
 
         {getPageNumbers().map((page, idx) =>
@@ -59,7 +61,7 @@ const Pagination = ({ currentPage, totalItems, itemsPerPage = 5, onPageChange })
           onClick={() => onPageChange(currentPage + 1)}
           disabled={currentPage === totalPages}
         >
-          Suivant
+          {t('common.next')}
         </button>
       </div>
     </div>

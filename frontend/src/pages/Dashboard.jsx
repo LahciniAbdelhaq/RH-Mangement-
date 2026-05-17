@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useToast } from '../context/ToastContext';
+import { useTranslation } from 'react-i18next';
 import { motion } from 'framer-motion';
 import { Skeleton } from '../components/Skeleton';
 import Modal from '../components/Modal';
@@ -21,6 +22,7 @@ const data = [
 const Dashboard = () => {
   const { user } = useAuth();
   const { showToast } = useToast();
+  const { t } = useTranslation();
   const [isLoading, setIsLoading] = useState(false);
   const [isRequestModalOpen, setIsRequestModalOpen] = useState(false);
   const [isEmployeeModalOpen, setIsEmployeeModalOpen] = useState(false);
@@ -255,12 +257,12 @@ const Dashboard = () => {
       <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}>
         <header className="header">
           <div className="header-title">
-            <h1>Mon Espace</h1>
-            <p>Bienvenue {user.name}, voici le résumé de vos activités.</p>
+            <h1>{t('dashboard.myWorkspace')}</h1>
+            <p>{t('dashboard.welcome')} {user.name}, {t('dashboard.welcomeDesc')}</p>
           </div>
           <div className="header-actions">
             <button className="action-btn primary" onClick={() => setIsRequestModalOpen(true)}>
-              <i className="fas fa-plus"></i> Nouvelle Demande
+              <i className="fas fa-plus"></i> {t('dashboard.newRequest')}
             </button>
           </div>
         </header>
@@ -270,22 +272,22 @@ const Dashboard = () => {
             <div className="stat-header">
               <div className="stat-icon primary"><i className="fas fa-calendar"></i></div>
             </div>
-            <div className="stat-value">18 Jours</div>
-            <div className="stat-label">Solde de congés restants</div>
+            <div className="stat-value">{t('dashboard.stats.days', { count: 18 })}</div>
+            <div className="stat-label">{t('dashboard.stats.leavesBalance')}</div>
           </div>
           <div className="stat-card amber-card">
             <div className="stat-header">
               <div className="stat-icon warning"><i className="fas fa-clock"></i></div>
             </div>
             <div className="stat-value">2</div>
-            <div className="stat-label">Demandes en attente</div>
+            <div className="stat-label">{t('dashboard.stats.pendingRequests')}</div>
           </div>
           <div className="stat-card emerald-card">
             <div className="stat-header">
               <div className="stat-icon success"><i className="fas fa-check"></i></div>
             </div>
             <div className="stat-value">4</div>
-            <div className="stat-label">Demandes approuvées</div>
+            <div className="stat-label">{t('dashboard.stats.approvedRequests')}</div>
           </div>
         </div>
 
@@ -432,8 +434,8 @@ const Dashboard = () => {
       {/* Header */}
       <header className="header">
         <div className="header-title">
-          <h1>Aperçu RH ({user?.role === 'HR_MANAGER' ? 'Manager RH' : 'Chef de Dép.'})</h1>
-          <p>Gérez et suivez tous vos employés et demandes RH</p>
+          <h1>{t('dashboard.managerTitle', { role: user?.role === 'HR_MANAGER' ? t('auth.hrManager') : t('auth.manager') })}</h1>
+          <p>{t('dashboard.managerSubtitle')}</p>
         </div>
       </header>
 
@@ -447,7 +449,7 @@ const Dashboard = () => {
             <div className="stat-trend positive"><i className="fas fa-arrow-up"></i> +12%</div>
           </div>
           <div className="stat-value">452</div>
-          <div className="stat-label">Employés Actifs</div>
+          <div className="stat-label">{t('dashboard.stats.activeEmployees')}</div>
         </div>
 
         <div className="stat-card amber-card">
@@ -456,7 +458,7 @@ const Dashboard = () => {
             <div className="stat-trend negative"><i className="fas fa-circle" style={{ fontSize: '8px' }}></i> Urgent</div>
           </div>
           <div className="stat-value">18</div>
-          <div className="stat-label">En Attente de Validation</div>
+          <div className="stat-label">{t('dashboard.stats.pendingVal')}</div>
         </div>
 
         <div className="stat-card emerald-card">
@@ -465,7 +467,7 @@ const Dashboard = () => {
             <div className="stat-trend positive"><i className="fas fa-check"></i> À jour</div>
           </div>
           <div className="stat-value">8</div>
-          <div className="stat-label">En Congé Aujourd'hui</div>
+          <div className="stat-label">{t('dashboard.stats.onLeaveToday')}</div>
         </div>
 
         <div className="stat-card lime-card">
@@ -474,7 +476,7 @@ const Dashboard = () => {
             <div className="stat-trend positive" style={{ color: 'var(--success)' }}>Optimal</div>
           </div>
           <div className="stat-value">87%</div>
-          <div className="stat-label">Taux de Conformité</div>
+          <div className="stat-label">{t('dashboard.stats.complianceRate')}</div>
         </div>
       </div>
 
@@ -484,7 +486,7 @@ const Dashboard = () => {
         <div className="card">
           <div className="card-title">
             <i className="fas fa-check-circle" style={{ color: 'var(--success)' }}></i>
-            Budgets par Département
+            {t('dashboard.departmentBudgets')}
           </div>
           
           <div className="progress-item">
@@ -532,7 +534,7 @@ const Dashboard = () => {
         <div className="card">
           <div className="card-title">
             <i className="far fa-clock" style={{ color: 'var(--primary)' }}></i>
-            Activité Récente
+            {t('dashboard.recentActivity')}
           </div>
           
           <div className="timeline">
@@ -541,8 +543,8 @@ const Dashboard = () => {
                 <i className="fas fa-arrow-up"></i>
               </div>
               <div className="timeline-content">
-                <h4>Nouvelle demande soumise</h4>
-                <p>Attestation de salaire • il y a 2h</p>
+                <h4>{t('dashboard.newRequestSubmitted')}</h4>
+                <p>{t('dashboard.salaryCertificate')} • {t('dashboard.hoursAgo', { count: 2 })}</p>
               </div>
             </div>
 
@@ -551,8 +553,8 @@ const Dashboard = () => {
                 <i className="fas fa-check"></i>
               </div>
               <div className="timeline-content">
-                <h4>Congé approuvé</h4>
-                <p>Congé annuel par Sarah M. • il y a 4h</p>
+                <h4>{t('dashboard.leaveApproved')}</h4>
+                <p>{t('dashboard.leaveApprovedDesc')}</p>
               </div>
             </div>
 
@@ -561,8 +563,8 @@ const Dashboard = () => {
                 <i className="fas fa-sync"></i>
               </div>
               <div className="timeline-content">
-                <h4>Mise à jour de la politique</h4>
-                <p>Politique RH v2.0 publiée • il y a 6h</p>
+                <h4>{t('dashboard.policyUpdate')}</h4>
+                <p>{t('dashboard.policyUpdateDesc')}</p>
               </div>
             </div>
           </div>
@@ -572,20 +574,20 @@ const Dashboard = () => {
         <div className="card">
           <div className="card-title">
             <i className="fas fa-bolt" style={{ color: 'var(--primary)' }}></i>
-            Actions Rapides
+            {t('dashboard.quickActions')}
           </div>
           
           <button className="quick-action-btn action-blue" onClick={() => setIsEmployeeModalOpen(true)}>
-            <i className="fas fa-user-plus"></i> Ajouter un employé
+            <i className="fas fa-user-plus"></i> {t('dashboard.addEmployee')}
           </button>
           <button className="quick-action-btn action-purple" onClick={() => setIsRequestModalOpen(true)}>
-            <i className="fas fa-file-alt"></i> Créer une demande
+            <i className="fas fa-file-alt"></i> {t('dashboard.createRequest')}
           </button>
           <button className="quick-action-btn action-orange" onClick={() => setIsLeaveModalOpen(true)}>
-            <i className="fas fa-calendar-check"></i> Gérer les congés
+            <i className="fas fa-calendar-check"></i> {t('dashboard.manageLeaves')}
           </button>
           <button className="quick-action-btn primary" style={{ marginTop: '8px' }}>
-            <i className="fas fa-download"></i> Générer rapport de paie
+            <i className="fas fa-download"></i> {t('dashboard.generatePayroll')}
           </button>
         </div>
 
@@ -693,15 +695,15 @@ const Dashboard = () => {
       {/* Table Section */}
       <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
         <div className="table-toolbar">
-          <h3 className="modern-table-title">Demandes Récentes</h3>
+          <h3 className="modern-table-title">{t('dashboard.recentRequests')}</h3>
           <div className="filter-group">
             <div className="search-bar">
               <i className="fas fa-search"></i>
-              <input type="text" placeholder="Rechercher..." />
+              <input type="text" placeholder={t('common.search')} />
             </div>
-            <button className="filter-pill filter-pill-blue">Dép: Ingénierie</button>
-            <button className="filter-pill filter-pill-green">Statut: Actif</button>
-            <button className="filter-pill filter-pill-purple">Type: Demande</button>
+            <button className="filter-pill filter-pill-blue">{t('employees.filters.deptFilter')}</button>
+            <button className="filter-pill filter-pill-green">{t('employees.filters.statusFilter')}</button>
+            <button className="filter-pill filter-pill-purple">{t('requests.table.request')}</button>
           </div>
         </div>
 
@@ -709,20 +711,20 @@ const Dashboard = () => {
           <table>
             <thead>
               <tr>
-                <th>Demande</th>
-                <th>Département</th>
-                <th>Propriétaire</th>
-                <th>Statut</th>
-                <th>Mise à jour</th>
-                <th style={{ textAlign: 'center' }}>Actions</th>
+                <th>{t('requests.table.request')}</th>
+                <th>{t('requests.table.department')}</th>
+                <th>{t('requests.table.owner')}</th>
+                <th>{t('common.status')}</th>
+                <th>{t('dashboard.updated')}</th>
+                <th style={{ textAlign: 'center' }}>{t('requests.table.actions')}</th>
               </tr>
             </thead>
             <tbody>
               {[
-                { icon: 'fa-file-invoice', iconBg: '#DBEAFE', iconColor: '#2563EB', title: "Attestation de Salaire", sub: 'PDF • Demande', dept: 'Finance', initials: 'SM', avatarBg: '#2563EB', owner: 'Sarah Miller', status: 'Approuvé', statusBg: '#DCFCE7', statusColor: '#16A34A', date: '10 Nov, 2026' },
-                { icon: 'fa-plane-departure', iconBg: '#ECFCCB', iconColor: '#65A30D', title: "Congé Annuel", sub: '14 Jours • Formulaire', dept: 'Opérations', initials: 'JD', avatarBg: '#0D9488', owner: 'John Davis', status: 'En Attente', statusBg: '#FEF3C7', statusColor: '#D97706', date: '12 Nov, 2026' },
-                { icon: 'fa-briefcase-medical', iconBg: '#F3E8FF', iconColor: '#9333EA', title: "Certificat de Maladie", sub: 'Médical • PDF', dept: 'RH', initials: 'AK', avatarBg: '#9333EA', owner: 'Alex Kim', status: 'Approuvé', statusBg: '#DCFCE7', statusColor: '#16A34A', date: '08 Nov, 2026' },
-                { icon: 'fa-shield-alt', iconBg: '#CCFBF1', iconColor: '#0D9488', title: "Checklist Conformité 2026", sub: 'v1.5 • XLSX', dept: 'Conformité', initials: 'MC', avatarBg: '#10B981', owner: 'Maria Chen', status: 'En Révision', statusBg: '#FEF3C7', statusColor: '#D97706', date: '11 Nov, 2026' },
+                { icon: 'fa-file-invoice', iconBg: '#DBEAFE', iconColor: '#2563EB', title: t('dashboard.salaryCertificate'), sub: `PDF • ${t('requests.table.request')}`, dept: 'Finance', initials: 'SM', avatarBg: '#2563EB', owner: 'Sarah Miller', status: t('requests.tabs.completed'), statusBg: '#DCFCE7', statusColor: '#16A34A', date: '10 Nov, 2026' },
+                { icon: 'fa-plane-departure', iconBg: '#ECFCCB', iconColor: '#65A30D', title: t('requests.table.leave'), sub: `14 ${t('employees.stats.onLeave')} • Formulaire`, dept: 'Opérations', initials: 'JD', avatarBg: '#0D9488', owner: 'John Davis', status: t('requests.tabs.pending'), statusBg: '#FEF3C7', statusColor: '#D97706', date: '12 Nov, 2026' },
+                { icon: 'fa-briefcase-medical', iconBg: '#F3E8FF', iconColor: '#9333EA', title: t('requests.table.medical'), sub: `Médical • PDF`, dept: 'RH', initials: 'AK', avatarBg: '#9333EA', owner: 'Alex Kim', status: t('requests.tabs.completed'), statusBg: '#DCFCE7', statusColor: '#16A34A', date: '08 Nov, 2026' },
+                { icon: 'fa-shield-alt', iconBg: '#CCFBF1', iconColor: '#0D9488', title: t('requests.table.complianceChecklist'), sub: 'v1.5 • XLSX', dept: 'Conformité', initials: 'MC', avatarBg: '#10B981', owner: 'Maria Chen', status: t('requests.tabs.inProgress'), statusBg: '#FEF3C7', statusColor: '#D97706', date: '11 Nov, 2026' },
               ].map((row, i) => (
                 <tr key={i}>
                   <td>
