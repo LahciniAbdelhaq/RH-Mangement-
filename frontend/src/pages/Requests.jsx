@@ -4,9 +4,196 @@ import Pagination from '../components/Pagination';
 import { motion } from 'framer-motion';
 import { useToast } from '../context/ToastContext';
 import { FileText, Clock, AlertTriangle, CheckCircle2, User, Building2, Calendar, Download } from 'lucide-react';
+import { jsPDF } from 'jspdf';
 
 const Requests = () => {
   const { showToast } = useToast();
+
+  const handleExportDocument = (row) => {
+    let extension = 'txt';
+    let mimeType = 'text/plain;charset=utf-8';
+    let formatLabel = 'texte brut';
+
+    const subLower = (row.sub || '').toLowerCase();
+    
+    // Check type or default to PDF
+    if (subLower.includes('pdf') || subLower.includes('formulaire') || row.title.toLowerCase().includes('attestation')) {
+      extension = 'pdf';
+      formatLabel = 'PDF';
+    } else if (subLower.includes('xlsx')) {
+      extension = 'xlsx';
+      mimeType = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
+      formatLabel = 'Excel (XLSX)';
+    } else {
+      extension = 'pdf';
+      formatLabel = 'PDF';
+    }
+
+    showToast(`Préparation de l'export de "${row.title}" au format ${formatLabel}...`, 'info');
+    
+    setTimeout(() => {
+      try {
+        if (extension === 'pdf') {
+          // Generate real PDF using jsPDF
+          const doc = new jsPDF();
+          const img = new Image();
+          img.src = '/logo.png';
+          
+          const generatePDF = (logoLoaded) => {
+            // === HEADER ===
+            if (logoLoaded) {
+              doc.addImage(img, 'PNG', 15, 15, 35, 35);
+            }
+            
+            // Company Info (Right aligned)
+            doc.setFont("helvetica", "bold");
+            doc.setFontSize(18);
+            doc.setTextColor(15, 23, 42); // Slate 900
+            doc.text("RH MANAGEMENT S.A.", 195, 22, { align: "right" });
+            
+            doc.setFontSize(10);
+            doc.setFont("helvetica", "normal");
+            doc.setTextColor(100, 116, 139); // Slate 500
+            doc.text("Quartier des Affaires, Casablanca, Maroc", 195, 30, { align: "right" });
+            doc.text("Tél : +212 5 22 00 00 00", 195, 36, { align: "right" });
+            doc.text("Email : contact@rh-management.com", 195, 42, { align: "right" });
+
+            // Header Separator Line
+            doc.setDrawColor(226, 232, 240);
+            doc.setLineWidth(0.5);
+            doc.line(15, 55, 195, 55);
+
+            // === DATE & PLACE ===
+            const today = new Date().toLocaleDateString('fr-FR', { year: 'numeric', month: 'long', day: 'numeric' });
+            doc.setFontSize(11);
+            doc.setTextColor(15, 23, 42);
+            doc.text(`Fait à Casablanca, le ${today}`, 195, 70, { align: "right" });
+
+            // === TITLE ===
+            doc.setFontSize(20);
+            doc.setFont("helvetica", "bold");
+            doc.setTextColor(37, 99, 235); // Blue Primary
+            const titleText = (row.title ? row.title.toUpperCase() : 'ATTESTATION ADMINISTRATIVE');
+            doc.text(titleText, 105, 95, { align: "center" });
+            
+            // Title underline
+            doc.setDrawColor(37, 99, 235);
+            const textWidth = doc.getTextWidth(titleText);
+            doc.line(105 - (textWidth/2), 98, 105 + (textWidth/2), 98);
+
+            // === BODY ===
+            doc.setFontSize(12);
+            doc.setFont("helvetica", "normal");
+            doc.setTextColor(30, 41, 59); // Slate 800
+
+            const titleLower = row.title ? row.title.toLowerCase() : "";
+            
+            if (titleLower.includes('salaire') || titleLower.includes('travail') || titleLower.includes('attestation')) {
+              doc.text("Je soussigné(e), Directeur des Ressources Humaines de la société RH MANAGEMENT,", 20, 120);
+              doc.text("certifie et atteste par la présente que :", 20, 128);
+              
+              // Highlighted employee details
+              doc.setFillColor(248, 250, 252);
+              doc.roundedRect(20, 140, 170, 35, 3, 3, 'F');
+              
+              doc.setFont("helvetica", "bold");
+              doc.text(`Monsieur / Madame :`, 25, 152);
+              doc.setFont("helvetica", "normal");
+              doc.text(`${row.owner || 'Non spécifié'}`, 75, 152);
+              
+              doc.setFont("helvetica", "bold");
+              doc.text(`Département :`, 25, 165);
+              doc.setFont("helvetica", "normal");
+              doc.text(`${row.dept || 'Général'}`, 75, 165);
+              
+              doc.text("Est régulièrement employé(e) au sein de notre établissement.", 20, 195);
+              doc.text("La présente attestation est délivrée à la demande de l'intéressé(e) pour servir", 20, 205);
+              doc.text("et valoir ce que de droit.", 20, 213);
+              
+            } else {
+              // Generic administrative text
+              doc.text(`Objet : ${titleText}`, 20, 120);
+              doc.text(`Le présent document certifie les informations administratives suivantes concernant`, 20, 135);
+              doc.text(`le collaborateur ci-dessous :`, 20, 143);
+              
+              // Highlighted details
+              doc.setFillColor(248, 250, 252);
+              doc.roundedRect(20, 155, 170, 45, 3, 3, 'F');
+              
+              doc.setFont("helvetica", "bold");
+              doc.text(`Nom complet :`, 25, 167);
+              doc.setFont("helvetica", "normal");
+              doc.text(`${row.owner || 'Non spécifié'}`, 75, 167);
+              
+              doc.setFont("helvetica", "bold");
+              doc.text(`Département :`, 25, 177);
+              doc.setFont("helvetica", "normal");
+              doc.text(`${row.dept || 'Général'}`, 75, 177);
+              
+              doc.setFont("helvetica", "bold");
+              doc.text(`Statut :`, 25, 187);
+              doc.setFont("helvetica", "normal");
+              doc.text(`${row.status || 'Non défini'}`, 75, 187);
+              
+              doc.text("Document certifié et validé par le département des ressources humaines.", 20, 220);
+            }
+
+            // === SIGNATURE BLOCK ===
+            doc.setFont("helvetica", "bold");
+            doc.text("La Direction des Ressources Humaines", 120, 240);
+            
+            // Fake Stamp / Cachet
+            doc.setDrawColor(37, 99, 235);
+            doc.setTextColor(37, 99, 235);
+            doc.setLineWidth(0.5);
+            doc.circle(160, 260, 12);
+            doc.circle(160, 260, 11.2);
+            doc.setFontSize(8);
+            doc.text("CACHET", 160, 259, { align: "center" });
+            doc.text("OFFICIEL", 160, 263, { align: "center" });
+
+            // === FOOTER ===
+            const pageHeight = doc.internal.pageSize.height;
+            doc.setDrawColor(226, 232, 240);
+            doc.line(15, pageHeight - 20, 195, pageHeight - 20);
+            
+            doc.setFontSize(7);
+            doc.setFont("helvetica", "normal");
+            doc.setTextColor(148, 163, 184); // Slate 400
+            doc.text("RH MANAGEMENT S.A. - RC: 12345 - IF: 678910 - ICE: 000001234567890", 105, pageHeight - 12, { align: "center" });
+            doc.text("Ce document est généré électroniquement et possède la même valeur juridique qu'un document manuscrit.", 105, pageHeight - 7, { align: "center" });
+
+            doc.save(`${row.title ? row.title.toLowerCase().replace(/\s+/g, '_') : 'document'}_export.pdf`);
+          };
+
+          img.onload = () => generatePDF(true);
+          img.onerror = () => generatePDF(false);
+        } else {
+          const element = document.createElement("a");
+          let fileContent = '';
+          
+          if (extension === 'xlsx') {
+            fileContent = `ID_Document;Type_Document;Proprietaire;Departement;Statut;Date_Mise_A_Jour\nDOC-2026-REF-${Math.floor(1000 + Math.random() * 9000)};${row.title};${row.owner || 'Non spécifié'};${row.dept || 'Général'};${row.status};${row.date || 'En attente'}`;
+          } else {
+            fileContent = `==================================================\nRH MANAGEMENT SYSTEM - EXPORT SECURISE\n==================================================\nREF DOCUMENT : DOC-2026-REF-${Math.floor(1000 + Math.random() * 9000)}\nTYPE DOCUMENT: ${row.title.toUpperCase()}\nPROPRIÉTAIRE : ${row.owner || 'Non spécifié'}\nDÉPARTEMENT  : ${row.dept || 'Général'}\nSTATUT       : ${row.status || 'Non défini'}\nDATE D'EFFET : ${row.date || 'En attente'}`;
+          }
+
+          const file = new Blob([fileContent], { type: mimeType });
+          element.href = URL.createObjectURL(file);
+          element.download = `${row.title.toLowerCase().replace(/\s+/g, '_')}_export.${extension}`;
+          document.body.appendChild(element);
+          element.click();
+          document.body.removeChild(element);
+        }
+        
+        showToast(`Document "${row.title}" exporté en format ${formatLabel} !`, 'success');
+      } catch (err) {
+        console.error(err);
+        showToast('Erreur lors de la génération du fichier.', 'error');
+      }
+    }, 1000);
+  };
+
   const [activeTab, setActiveTab] = useState('attente');
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isDetailsModalOpen, setIsDetailsModalOpen] = useState(false);
@@ -113,8 +300,8 @@ const Requests = () => {
                   <td style={{ textAlign: 'center' }}>
                     <div className="table-actions" style={{ justifyContent: 'center' }}>
                       <button onClick={() => setIsDetailsModalOpen(true)} className="modern-action-btn" title="Voir les détails"><i className="far fa-eye"></i></button>
-                      <button className="modern-action-btn" title="Approuver"><i className="fas fa-check"></i></button>
-                      <button className="modern-action-btn" title="Rejeter"><i className="fas fa-times"></i></button>
+                      <button className="modern-action-btn" title="Approuver" onClick={onApprove}><i className="fas fa-check"></i></button>
+                      <button className="modern-action-btn" title="Rejeter" onClick={onReject}><i className="fas fa-times"></i></button>
                     </div>
                   </td>
                 </tr>
@@ -139,11 +326,11 @@ const Requests = () => {
                   </td>
                   <td style={{ color: 'var(--text-gray)', fontSize: '0.85rem' }}>Il y a 5h</td>
 
-                  <td style={{ textAlign: 'right' }}>
-                    <div className="table-actions" style={{ justifyContent: 'flex-end' }}>
+                  <td style={{ textAlign: 'center' }}>
+                    <div className="table-actions" style={{ justifyContent: 'center' }}>
                       <button onClick={() => setIsDetailsModalOpen(true)} className="modern-action-btn" title="Voir les détails"><i className="far fa-eye"></i></button>
-                      <button className="modern-action-btn" title="Approuver"><i className="fas fa-check"></i></button>
-                      <button className="modern-action-btn" title="Rejeter"><i className="fas fa-times"></i></button>
+                      <button className="modern-action-btn" title="Approuver" onClick={onApprove}><i className="fas fa-check"></i></button>
+                      <button className="modern-action-btn" title="Rejeter" onClick={onReject}><i className="fas fa-times"></i></button>
                     </div>
                   </td>
                 </tr>
@@ -166,7 +353,7 @@ const Requests = () => {
                   <th>Demande</th>
                   <th>Propriétaire</th>
                   <th>Statut</th>
-                  <th style={{ textAlign: 'right' }}>Actions</th>
+                  <th style={{ textAlign: 'center' }}>Actions</th>
                 </tr>
               </thead>
               <tbody>
@@ -194,8 +381,8 @@ const Requests = () => {
                       <i className="fas fa-spinner fa-spin" style={{ color: '#D97706' }}></i> Traitement manager
                     </div>
                   </td>
-                  <td style={{ textAlign: 'right' }}>
-                    <div className="table-actions" style={{ justifyContent: 'flex-end' }}>
+                  <td style={{ textAlign: 'center' }}>
+                    <div className="table-actions" style={{ justifyContent: 'center' }}>
                       <button onClick={() => setIsDetailsModalOpen(true)} className="modern-action-btn" title="Voir les détails"><i className="far fa-eye"></i></button>
                     </div>
                   </td>
@@ -219,7 +406,7 @@ const Requests = () => {
                   <th>Demande</th>
                   <th>Propriétaire</th>
                   <th>Clôture</th>
-                  <th style={{ textAlign: 'right' }}>Actions</th>
+                  <th style={{ textAlign: 'center' }}>Actions</th>
                 </tr>
               </thead>
               <tbody>
@@ -247,10 +434,16 @@ const Requests = () => {
                       <i className="fas fa-check-circle" style={{ color: '#16A34A' }}></i> Hier
                     </div>
                   </td>
-                  <td style={{ textAlign: 'right' }}>
-                    <div className="table-actions" style={{ justifyContent: 'flex-end' }}>
+                  <td style={{ textAlign: 'center' }}>
+                    <div className="table-actions" style={{ justifyContent: 'center' }}>
                       <button onClick={() => setIsDetailsModalOpen(true)} className="modern-action-btn" title="Voir les détails"><i className="far fa-eye"></i></button>
-                      <button className="modern-action-btn" title="Télécharger copie"><i className="fas fa-download"></i></button>
+                      <button className="modern-action-btn" title="Télécharger copie" onClick={() => handleExportDocument({
+                        title: "Attestation de Travail",
+                        owner: "Emma Wilson",
+                        dept: "Opérations",
+                        status: "Clôturé",
+                        date: "Hier"
+                      })}><i className="fas fa-download"></i></button>
                     </div>
                   </td>
                 </tr>

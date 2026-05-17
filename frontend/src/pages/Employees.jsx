@@ -57,28 +57,28 @@ const Employees = () => {
 
       {/* Stats Row */}
       <div className="stats-grid" style={{ marginBottom: '24px' }}>
-        <div className="stat-card">
+        <div className="stat-card blue-card">
           <div className="stat-header">
             <div className="stat-icon primary"><i className="fas fa-users"></i></div>
           </div>
           <div className="stat-value">452</div>
           <div className="stat-label">Employés Actifs</div>
         </div>
-        <div className="stat-card">
+        <div className="stat-card purple-card">
           <div className="stat-header">
             <div className="stat-icon success" style={{ background: '#E0E7FF', color: '#4F46E5' }}><i className="fas fa-user-plus"></i></div>
           </div>
           <div className="stat-value">24</div>
           <div className="stat-label">Intégration</div>
         </div>
-        <div className="stat-card">
+        <div className="stat-card amber-card">
           <div className="stat-header">
             <div className="stat-icon warning"><i className="fas fa-umbrella-beach"></i></div>
           </div>
           <div className="stat-value">12</div>
           <div className="stat-label">En Congé</div>
         </div>
-        <div className="stat-card">
+        <div className="stat-card emerald-card">
           <div className="stat-header">
             <div className="stat-icon" style={{ background: '#F3E8FF', color: '#9333EA' }}><i className="fas fa-building"></i></div>
           </div>

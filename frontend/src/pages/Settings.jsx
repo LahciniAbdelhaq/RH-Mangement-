@@ -1,9 +1,17 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { useLocation } from 'react-router-dom';
 import { useToast } from '../context/ToastContext';
 
 const Settings = () => {
   const { showToast } = useToast();
-  const [activeTab, setActiveTab] = useState('profil');
+  const location = useLocation();
+  const [activeTab, setActiveTab] = useState(location.state?.tab || 'profil');
+
+  useEffect(() => {
+    if (location.state?.tab) {
+      setActiveTab(location.state.tab);
+    }
+  }, [location.state]);
 
   return (
     <>
@@ -23,7 +31,7 @@ const Settings = () => {
         {/* Settings Menu */}
         <div style={{ width: '240px', display: 'flex', flexDirection: 'column' }}>
           <button className={`settings-nav-item ${activeTab === 'profil' ? 'active' : ''}`} onClick={() => setActiveTab('profil')}>
-            <i className="far fa-user-circle"></i> <span>Profil</span>
+            <i className="far fa-user-circle"></i> <span>Modifier le Profil</span>
           </button>
           <button className={`settings-nav-item ${activeTab === 'organisation' ? 'active' : ''}`} onClick={() => setActiveTab('organisation')}>
             <i className="far fa-building"></i> <span>Organisation</span>
@@ -45,7 +53,7 @@ const Settings = () => {
           {/* Pane: Profil */}
           {activeTab === 'profil' && (
             <div>
-              <h3 style={{ fontSize: '1.1rem', marginBottom: '16px', borderBottom: '1px solid var(--border-color)', paddingBottom: '12px' }}>Paramètres du Profil</h3>
+              <h3 style={{ fontSize: '1.1rem', marginBottom: '16px', borderBottom: '1px solid var(--border-color)', paddingBottom: '12px' }}>Modifier le Profil</h3>
               
               <div style={{ display: 'flex', gap: '24px', marginBottom: '16px' }}>
                 <img src="https://ui-avatars.com/api/?name=Sarah+Connor&background=2563EB&color=fff&size=128" alt="Profile" style={{ width: '80px', height: '80px', borderRadius: '50%' }} />

@@ -6,6 +6,8 @@ import Requests from './pages/Requests';
 import LeaveManagement from './pages/LeaveManagement';
 import Compliance from './pages/Compliance';
 import Settings from './pages/Settings';
+import Help from './pages/Help';
+import Profile from './pages/Profile';
 import Login from './pages/Login';
 import Register from './pages/Register';
 import ForgotPassword from './pages/ForgotPassword';
@@ -30,6 +32,8 @@ function App() {
             <Route path="leave" element={<LeaveManagement />} />
             <Route path="compliance" element={<Compliance />} />
             <Route path="settings" element={<Settings />} />
+            <Route path="help" element={<Help />} />
+            <Route path="profile" element={<Profile />} />
             <Route path="notifications" element={<Notifications />} />
           </Route>
 

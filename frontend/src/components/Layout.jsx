@@ -145,13 +145,31 @@ export default function AppLayout() {
                   <div style={{ padding: '8px 16px', borderBottom: '1px solid var(--border-color)', marginBottom: '8px' }}>
                     <span style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, color: 'var(--text-dark)' }}>Connecté en tant que</span>
                     <span style={{ display: 'block', fontSize: '0.8rem', color: 'var(--text-gray)', textOverflow: 'ellipsis', overflow: 'hidden', whiteSpace: 'nowrap' }}>{user.email}</span>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: '6px' }}>
+                      <span className={`filter-tag ${user.role === 'HR_MANAGER' ? 'blue' : 'green'}`} style={{ fontSize: '0.65rem', padding: '2px 8px', borderRadius: '4px', textTransform: 'uppercase', fontWeight: 700 }}>
+                        {user.role === 'HR_MANAGER' ? 'Responsable RH' : 'Collaborateur'}
+                      </span>
+                      <span style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '0.65rem', color: '#10B981', fontWeight: 600 }}>
+                        <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#10B981', display: 'inline-block', boxShadow: '0 0 8px #10B981' }}></span>
+                        En ligne
+                      </span>
+                    </div>
                   </div>
                   
-                  <Link to="/settings" onClick={() => setIsProfileOpen(false)} className="dropdown-item" style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '10px 16px', color: 'var(--text-dark)', textDecoration: 'none', fontSize: '0.9rem', transition: 'background 0.2s' }}>
-                    <i className="far fa-user" style={{ width: '16px', textAlign: 'center' }}></i> Mon Profil
+                  <Link to="/profile" onClick={() => setIsProfileOpen(false)} className="dropdown-item" style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '10px 16px', color: 'var(--text-dark)', textDecoration: 'none', fontSize: '0.9rem', transition: 'background 0.2s' }}>
+                    <i className="far fa-user" style={{ width: '16px', textAlign: 'center', color: 'var(--primary)' }}></i> Mon Profil
                   </Link>
-                  <Link to="/settings" onClick={() => setIsProfileOpen(false)} className="dropdown-item" style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '10px 16px', color: 'var(--text-dark)', textDecoration: 'none', fontSize: '0.9rem', transition: 'background 0.2s' }}>
-                    <i className="fas fa-cog" style={{ width: '16px', textAlign: 'center' }}></i> Paramètres
+                  <Link to="/settings" state={{ tab: 'securite' }} onClick={() => setIsProfileOpen(false)} className="dropdown-item" style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '10px 16px', color: 'var(--text-dark)', textDecoration: 'none', fontSize: '0.9rem', transition: 'background 0.2s' }}>
+                    <i className="fas fa-shield-alt" style={{ width: '16px', textAlign: 'center', color: 'var(--c-purple)' }}></i> Sécurité & Accès
+                  </Link>
+                  <Link to="/settings" state={{ tab: 'profil' }} onClick={() => setIsProfileOpen(false)} className="dropdown-item" style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '10px 16px', color: 'var(--text-dark)', textDecoration: 'none', fontSize: '0.9rem', transition: 'background 0.2s' }}>
+                    <i className="fas fa-cog" style={{ width: '16px', textAlign: 'center', color: 'var(--text-gray)' }}></i> Paramètres
+                  </Link>
+                  
+                  <div style={{ height: '1px', backgroundColor: 'var(--border-color)', margin: '8px 0' }}></div>
+                  
+                  <Link to="/help" onClick={() => setIsProfileOpen(false)} className="dropdown-item" style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '10px 16px', color: 'var(--text-dark)', textDecoration: 'none', fontSize: '0.9rem', transition: 'background 0.2s' }}>
+                    <i className="far fa-question-circle" style={{ width: '16px', textAlign: 'center', color: 'var(--c-orange)' }}></i> Centre d'Aide
                   </Link>
                   
                   <div style={{ height: '1px', backgroundColor: 'var(--border-color)', margin: '8px 0' }}></div>

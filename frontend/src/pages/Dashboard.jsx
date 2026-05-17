@@ -6,7 +6,8 @@ import { Skeleton } from '../components/Skeleton';
 import Modal from '../components/Modal';
 import Pagination from '../components/Pagination';
 import { User, Building2, Calendar, Fingerprint, FileText, Share2, Download, Mail, Briefcase, AlertTriangle, Umbrella } from 'lucide-react';
-import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
+import { jsPDF } from 'jspdf';
+import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
 
 const data = [
   { name: 'Jan', requests: 40, absences: 24 },
@@ -30,6 +31,191 @@ const Dashboard = () => {
   const handleRequestAction = (row) => {
     setSelectedRequest(row);
     setIsDetailsModalOpen(true);
+  };
+
+  const handleExportDocument = (row) => {
+    let extension = 'txt';
+    let mimeType = 'text/plain;charset=utf-8';
+    let formatLabel = 'texte brut';
+
+    const subLower = (row.sub || '').toLowerCase();
+    
+    // Check type or default to PDF
+    if (subLower.includes('pdf') || subLower.includes('formulaire') || (row.title && row.title.toLowerCase().includes('attestation'))) {
+      extension = 'pdf';
+      formatLabel = 'PDF';
+    } else if (subLower.includes('xlsx')) {
+      extension = 'xlsx';
+      mimeType = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
+      formatLabel = 'Excel (XLSX)';
+    } else {
+      extension = 'pdf';
+      formatLabel = 'PDF';
+    }
+
+    showToast(`Préparation de l'export de "${row.title}" au format ${formatLabel}...`, 'info');
+    
+    setTimeout(() => {
+      try {
+        if (extension === 'pdf') {
+          // Generate real PDF using jsPDF
+          const doc = new jsPDF();
+          const img = new Image();
+          img.src = '/logo.png';
+          
+          const generatePDF = (logoLoaded) => {
+            // === HEADER ===
+            if (logoLoaded) {
+              doc.addImage(img, 'PNG', 15, 15, 35, 35);
+            }
+            
+            // Company Info (Right aligned)
+            doc.setFont("helvetica", "bold");
+            doc.setFontSize(18);
+            doc.setTextColor(15, 23, 42); // Slate 900
+            doc.text("RH MANAGEMENT S.A.", 195, 22, { align: "right" });
+            
+            doc.setFontSize(10);
+            doc.setFont("helvetica", "normal");
+            doc.setTextColor(100, 116, 139); // Slate 500
+            doc.text("Quartier des Affaires, Casablanca, Maroc", 195, 30, { align: "right" });
+            doc.text("Tél : +212 5 22 00 00 00", 195, 36, { align: "right" });
+            doc.text("Email : contact@rh-management.com", 195, 42, { align: "right" });
+
+            // Header Separator Line
+            doc.setDrawColor(226, 232, 240);
+            doc.setLineWidth(0.5);
+            doc.line(15, 55, 195, 55);
+
+            // === DATE & PLACE ===
+            const today = new Date().toLocaleDateString('fr-FR', { year: 'numeric', month: 'long', day: 'numeric' });
+            doc.setFontSize(11);
+            doc.setTextColor(15, 23, 42);
+            doc.text(`Fait à Casablanca, le ${today}`, 195, 70, { align: "right" });
+
+            // === TITLE ===
+            doc.setFontSize(20);
+            doc.setFont("helvetica", "bold");
+            doc.setTextColor(37, 99, 235); // Blue Primary
+            const titleText = (row.title ? row.title.toUpperCase() : 'ATTESTATION ADMINISTRATIVE');
+            doc.text(titleText, 105, 95, { align: "center" });
+            
+            // Title underline
+            doc.setDrawColor(37, 99, 235);
+            const textWidth = doc.getTextWidth(titleText);
+            doc.line(105 - (textWidth/2), 98, 105 + (textWidth/2), 98);
+
+            // === BODY ===
+            doc.setFontSize(12);
+            doc.setFont("helvetica", "normal");
+            doc.setTextColor(30, 41, 59); // Slate 800
+
+            const titleLower = row.title ? row.title.toLowerCase() : "";
+            
+            if (titleLower.includes('salaire') || titleLower.includes('travail') || titleLower.includes('attestation')) {
+              doc.text("Je soussigné(e), Directeur des Ressources Humaines de la société RH MANAGEMENT,", 20, 120);
+              doc.text("certifie et atteste par la présente que :", 20, 128);
+              
+              // Highlighted employee details
+              doc.setFillColor(248, 250, 252);
+              doc.roundedRect(20, 140, 170, 35, 3, 3, 'F');
+              
+              doc.setFont("helvetica", "bold");
+              doc.text(`Monsieur / Madame :`, 25, 152);
+              doc.setFont("helvetica", "normal");
+              doc.text(`${row.owner || 'Non spécifié'}`, 75, 152);
+              
+              doc.setFont("helvetica", "bold");
+              doc.text(`Département :`, 25, 165);
+              doc.setFont("helvetica", "normal");
+              doc.text(`${row.dept || 'Général'}`, 75, 165);
+              
+              doc.text("Est régulièrement employé(e) au sein de notre établissement.", 20, 195);
+              doc.text("La présente attestation est délivrée à la demande de l'intéressé(e) pour servir", 20, 205);
+              doc.text("et valoir ce que de droit.", 20, 213);
+              
+            } else {
+              // Generic administrative text
+              doc.text(`Objet : ${titleText}`, 20, 120);
+              doc.text(`Le présent document certifie les informations administratives suivantes concernant`, 20, 135);
+              doc.text(`le collaborateur ci-dessous :`, 20, 143);
+              
+              // Highlighted details
+              doc.setFillColor(248, 250, 252);
+              doc.roundedRect(20, 155, 170, 45, 3, 3, 'F');
+              
+              doc.setFont("helvetica", "bold");
+              doc.text(`Nom complet :`, 25, 167);
+              doc.setFont("helvetica", "normal");
+              doc.text(`${row.owner || 'Non spécifié'}`, 75, 167);
+              
+              doc.setFont("helvetica", "bold");
+              doc.text(`Département :`, 25, 177);
+              doc.setFont("helvetica", "normal");
+              doc.text(`${row.dept || 'Général'}`, 75, 177);
+              
+              doc.setFont("helvetica", "bold");
+              doc.text(`Statut :`, 25, 187);
+              doc.setFont("helvetica", "normal");
+              doc.text(`${row.status || 'Non défini'}`, 75, 187);
+              
+              doc.text("Document certifié et validé par le département des ressources humaines.", 20, 220);
+            }
+
+            // === SIGNATURE BLOCK ===
+            doc.setFont("helvetica", "bold");
+            doc.text("La Direction des Ressources Humaines", 120, 240);
+            
+            // Fake Stamp / Cachet
+            doc.setDrawColor(37, 99, 235);
+            doc.setTextColor(37, 99, 235);
+            doc.setLineWidth(0.5);
+            doc.circle(160, 260, 12);
+            doc.circle(160, 260, 11.2);
+            doc.setFontSize(8);
+            doc.text("CACHET", 160, 259, { align: "center" });
+            doc.text("OFFICIEL", 160, 263, { align: "center" });
+
+            // === FOOTER ===
+            const pageHeight = doc.internal.pageSize.height;
+            doc.setDrawColor(226, 232, 240);
+            doc.line(15, pageHeight - 20, 195, pageHeight - 20);
+            
+            doc.setFontSize(7);
+            doc.setFont("helvetica", "normal");
+            doc.setTextColor(148, 163, 184); // Slate 400
+            doc.text("RH MANAGEMENT S.A. - RC: 12345 - IF: 678910 - ICE: 000001234567890", 105, pageHeight - 12, { align: "center" });
+            doc.text("Ce document est généré électroniquement et possède la même valeur juridique qu'un document manuscrit.", 105, pageHeight - 7, { align: "center" });
+
+            doc.save(`${row.title ? row.title.toLowerCase().replace(/\s+/g, '_') : 'document'}_export.pdf`);
+          };
+
+          img.onload = () => generatePDF(true);
+          img.onerror = () => generatePDF(false);
+        } else {
+          const element = document.createElement("a");
+          let fileContent = '';
+          
+          if (extension === 'xlsx') {
+            fileContent = `ID_Document;Type_Document;Proprietaire;Departement;Statut;Date_Mise_A_Jour\nDOC-2026-REF-${Math.floor(1000 + Math.random() * 9000)};${row.title};${row.owner || 'Non spécifié'};${row.dept || 'Général'};${row.status};${row.date || 'En attente'}`;
+          } else {
+            fileContent = `==================================================\nRH MANAGEMENT SYSTEM - EXPORT SECURISE\n==================================================\nREF DOCUMENT : DOC-2026-REF-${Math.floor(1000 + Math.random() * 9000)}\nTYPE DOCUMENT: ${row.title ? row.title.toUpperCase() : 'DOCUMENT'}\nPROPRIÉTAIRE : ${row.owner || 'Non spécifié'}\nDÉPARTEMENT  : ${row.dept || 'Général'}\nSTATUT       : ${row.status || 'Non défini'}\nDATE D'EFFET : ${row.date || 'En attente'}`;
+          }
+
+          const file = new Blob([fileContent], { type: mimeType });
+          element.href = URL.createObjectURL(file);
+          element.download = `${row.title ? row.title.toLowerCase().replace(/\s+/g, '_') : 'document'}_export.${extension}`;
+          document.body.appendChild(element);
+          element.click();
+          document.body.removeChild(element);
+        }
+        
+        showToast(`Document "${row.title || 'Document'}" exporté en format ${formatLabel} !`, 'success');
+      } catch (err) {
+        console.error(err);
+        showToast('Erreur lors de la génération du fichier.', 'error');
+      }
+    }, 1000);
   };
 
   // --- Employee Form State ---
@@ -80,21 +266,21 @@ const Dashboard = () => {
         </header>
 
         <div className="stats-grid">
-          <div className="stat-card">
+          <div className="stat-card blue-card">
             <div className="stat-header">
               <div className="stat-icon primary"><i className="fas fa-calendar"></i></div>
             </div>
             <div className="stat-value">18 Jours</div>
             <div className="stat-label">Solde de congés restants</div>
           </div>
-          <div className="stat-card">
+          <div className="stat-card amber-card">
             <div className="stat-header">
               <div className="stat-icon warning"><i className="fas fa-clock"></i></div>
             </div>
             <div className="stat-value">2</div>
             <div className="stat-label">Demandes en attente</div>
           </div>
-          <div className="stat-card">
+          <div className="stat-card emerald-card">
             <div className="stat-header">
               <div className="stat-icon success"><i className="fas fa-check"></i></div>
             </div>
@@ -253,7 +439,7 @@ const Dashboard = () => {
 
       {/* Stats Row */}
       <div className="stats-grid">
-        <div className="stat-card">
+        <div className="stat-card blue-card">
           <div className="stat-header">
             <div className="stat-icon primary">
               <i className="fas fa-users"></i>
@@ -264,7 +450,7 @@ const Dashboard = () => {
           <div className="stat-label">Employés Actifs</div>
         </div>
 
-        <div className="stat-card">
+        <div className="stat-card amber-card">
           <div className="stat-header">
             <div className="stat-icon warning"><i className="fas fa-clock"></i></div>
             <div className="stat-trend negative"><i className="fas fa-circle" style={{ fontSize: '8px' }}></i> Urgent</div>
@@ -273,7 +459,7 @@ const Dashboard = () => {
           <div className="stat-label">En Attente de Validation</div>
         </div>
 
-        <div className="stat-card">
+        <div className="stat-card emerald-card">
           <div className="stat-header">
             <div className="stat-icon success"><i className="fas fa-calendar-check"></i></div>
             <div className="stat-trend positive"><i className="fas fa-check"></i> À jour</div>
@@ -282,7 +468,7 @@ const Dashboard = () => {
           <div className="stat-label">En Congé Aujourd'hui</div>
         </div>
 
-        <div className="stat-card">
+        <div className="stat-card lime-card">
           <div className="stat-header">
             <div className="stat-icon" style={{ background: '#ECFCCB', color: '#65A30D' }}><i className="fas fa-shield-alt"></i></div>
             <div className="stat-trend positive" style={{ color: 'var(--success)' }}>Optimal</div>
@@ -403,8 +589,9 @@ const Dashboard = () => {
           </button>
         </div>
 
-        {/* Analytics Chart using Recharts */}
-        <div className="card" style={{ gridColumn: '1 / -1' }}>
+        {/* Analytics Section - 2 columns */}
+        {/* Area Chart: spans 2 columns */}
+        <div className="card" style={{ gridColumn: 'span 2' }}>
           <div className="card-title">
             <i className="fas fa-chart-area" style={{ color: 'var(--primary)' }}></i>
             Évolution des Demandes et Absences
@@ -430,6 +617,75 @@ const Dashboard = () => {
                 <Area type="monotone" dataKey="absences" name="Absences" stroke="var(--warning)" fillOpacity={1} fill="url(#colorAbsences)" />
               </AreaChart>
             </ResponsiveContainer>
+          </div>
+        </div>
+
+        {/* Donut Chart: spans 1 column */}
+        <div className="card" style={{ gridColumn: 'span 1', display: 'flex', flexDirection: 'column' }}>
+          <div className="card-title">
+            <i className="fas fa-chart-pie" style={{ color: 'var(--c-purple)' }}></i>
+            Distribution des Demandes
+          </div>
+          <div style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center', position: 'relative', minHeight: '220px' }}>
+            {/* Center Label */}
+            <div style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -85%)', textAlign: 'center', pointerEvents: 'none' }}>
+              <div style={{ fontSize: '1.8rem', fontWeight: 800, color: 'var(--text-dark)', lineHeight: 1 }}>45</div>
+              <div style={{ fontSize: '0.75rem', color: 'var(--text-gray)', fontWeight: 500, marginTop: '4px' }}>Total</div>
+            </div>
+            
+            {/* Chart */}
+            <div style={{ height: '140px', width: '100%' }}>
+              <ResponsiveContainer width="100%" height="100%">
+                <PieChart>
+                  <Pie
+                    data={[
+                      { name: 'Approuvées', value: 24, color: '#10B981' },
+                      { name: 'En attente', value: 18, color: '#F59E0B' },
+                      { name: 'Rejetées', value: 3, color: '#EF4444' }
+                    ]}
+                    cx="50%"
+                    cy="50%"
+                    innerRadius={48}
+                    outerRadius={62}
+                    paddingAngle={4}
+                    dataKey="value"
+                  >
+                    {[
+                      { color: '#10B981' },
+                      { color: '#F59E0B' },
+                      { color: '#EF4444' }
+                    ].map((entry, index) => (
+                      <Cell key={`cell-${index}`} fill={entry.color} />
+                    ))}
+                  </Pie>
+                </PieChart>
+              </ResponsiveContainer>
+            </div>
+            
+            {/* Legend / Status List */}
+            <div style={{ display: 'flex', justifyContent: 'space-around', gap: '8px', padding: '0 12px', marginTop: '4px' }}>
+              <div style={{ textAlign: 'center' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '0.75rem', fontWeight: 600, color: '#10B981', justifyContent: 'center' }}>
+                  <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#10B981', display: 'inline-block' }}></span>
+                  53%
+                </div>
+                <div style={{ fontSize: '0.65rem', color: 'var(--text-gray)', fontWeight: 500, marginTop: '2px' }}>Approuvées</div>
+              </div>
+              <div style={{ textAlign: 'center' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '0.75rem', fontWeight: 600, color: '#F59E0B', justifyContent: 'center' }}>
+                  <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#F59E0B', display: 'inline-block' }}></span>
+                  40%
+                </div>
+                <div style={{ fontSize: '0.65rem', color: 'var(--text-gray)', fontWeight: 500, marginTop: '2px' }}>En attente</div>
+              </div>
+              <div style={{ textAlign: 'center' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '0.75rem', fontWeight: 600, color: '#EF4444', justifyContent: 'center' }}>
+                  <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#EF4444', display: 'inline-block' }}></span>
+                  7%
+                </div>
+                <div style={{ fontSize: '0.65rem', color: 'var(--text-gray)', fontWeight: 500, marginTop: '2px' }}>Rejetées</div>
+              </div>
+            </div>
           </div>
         </div>
       </div>
@@ -492,7 +748,7 @@ const Dashboard = () => {
                   <td style={{ textAlign: 'center' }}>
                     <div className="table-actions" style={{ justifyContent: 'center' }}>
                       <button className="modern-action-btn" onClick={() => handleRequestAction(row)}><i className="far fa-eye"></i></button>
-                      <button className="modern-action-btn" onClick={() => showToast('Téléchargement du document...', 'info')}><i className="fas fa-download"></i></button>
+                      <button className="modern-action-btn" title="Exporter" onClick={() => handleExportDocument(row)}><i className="fas fa-download"></i></button>
                       <button className="modern-action-btn" onClick={() => showToast('Lien de partage copié !', 'success')}><i className="fas fa-share-alt"></i></button>
                     </div>
                   </td>

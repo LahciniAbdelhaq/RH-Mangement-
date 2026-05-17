@@ -48,28 +48,28 @@ const LeaveManagement = () => {
 
       {/* Stats Row */}
       <div className="stats-grid" style={{ marginBottom: '24px' }}>
-        <div className="stat-card">
+        <div className="stat-card emerald-card">
           <div className="stat-header">
             <div className="stat-icon primary"><i className="fas fa-umbrella-beach"></i></div>
           </div>
           <div className="stat-value">12</div>
           <div className="stat-label">En Congé Aujourd'hui</div>
         </div>
-        <div className="stat-card">
+        <div className="stat-card amber-card">
           <div className="stat-header">
             <div className="stat-icon warning"><i className="fas fa-hourglass-half"></i></div>
           </div>
           <div className="stat-value">5</div>
           <div className="stat-label">Demandes en Attente</div>
         </div>
-        <div className="stat-card">
+        <div className="stat-card purple-card">
           <div className="stat-header">
             <div className="stat-icon" style={{ background: '#FEE2E2', color: '#EF4444' }}><i className="fas fa-briefcase-medical"></i></div>
           </div>
           <div className="stat-value">3</div>
           <div className="stat-label">Arrêts Maladie (Cette Semaine)</div>
         </div>
-        <div className="stat-card">
+        <div className="stat-card blue-card">
           <div className="stat-header">
             <div className="stat-icon success"><i className="fas fa-calendar-check"></i></div>
           </div>
@@ -78,7 +78,7 @@ const LeaveManagement = () => {
         </div>
       </div>
 
-      <div className="middle-grid">
+      <div className="two-col-grid">
         {/* Calendar Preview Section */}
         <div className="card" style={{ height: '100%' }}>
           <div style={{ padding: '24px', borderBottom: '1px solid var(--border-color)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>

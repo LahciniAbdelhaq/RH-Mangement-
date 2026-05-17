@@ -255,6 +255,8 @@ body {
     font-size: 14px;
     line-height: 1.5;
     -webkit-font-smoothing: antialiased;
+    height: 100vh;
+    overflow: hidden;
 }
 
 /* Global Custom Scrollbar */
@@ -279,7 +281,8 @@ body {
 /* Layout */
 .app-container {
     display: flex;
-    min-height: 100vh;
+    height: 100vh;
+    overflow: hidden;
 }
 
 /* Sidebar */
@@ -290,6 +293,8 @@ body {
     display: flex;
     flex-direction: column;
     position: fixed;
+    top: 0;
+    left: 0;
     height: 100vh;
     z-index: 50;
     transition: all 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
@@ -547,7 +552,8 @@ body {
     margin-left: 260px;
     padding: 24px;
     background-color: var(--main-bg);
-    min-height: 100vh;
+    height: 100vh;
+    overflow: hidden;
     transition: all 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 
@@ -708,6 +714,45 @@ body {
     box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.5);
 }
 
+/* Premium Stat Card Accent Colors */
+.stat-card.blue-card {
+    border-left: 4px solid #3B82F6;
+    background: linear-gradient(135deg, var(--main-bg) 70%, rgba(59, 130, 246, 0.05)) !important;
+}
+.stat-card.amber-card {
+    border-left: 4px solid #F59E0B;
+    background: linear-gradient(135deg, var(--main-bg) 70%, rgba(245, 158, 11, 0.05)) !important;
+}
+.stat-card.emerald-card {
+    border-left: 4px solid #10B981;
+    background: linear-gradient(135deg, var(--main-bg) 70%, rgba(16, 185, 129, 0.05)) !important;
+}
+.stat-card.purple-card {
+    border-left: 4px solid #8B5CF6;
+    background: linear-gradient(135deg, var(--main-bg) 70%, rgba(139, 92, 246, 0.05)) !important;
+}
+.stat-card.lime-card {
+    border-left: 4px solid #84CC16;
+    background: linear-gradient(135deg, var(--main-bg) 70%, rgba(132, 204, 22, 0.05)) !important;
+}
+
+/* Dark mode adjustments for glass gradient tints */
+[data-theme="dark"] .stat-card.blue-card {
+    background: linear-gradient(135deg, var(--main-bg) 70%, rgba(59, 130, 246, 0.1)) !important;
+}
+[data-theme="dark"] .stat-card.amber-card {
+    background: linear-gradient(135deg, var(--main-bg) 70%, rgba(245, 158, 11, 0.1)) !important;
+}
+[data-theme="dark"] .stat-card.emerald-card {
+    background: linear-gradient(135deg, var(--main-bg) 70%, rgba(16, 185, 129, 0.1)) !important;
+}
+[data-theme="dark"] .stat-card.purple-card {
+    background: linear-gradient(135deg, var(--main-bg) 70%, rgba(139, 92, 246, 0.1)) !important;
+}
+[data-theme="dark"] .stat-card.lime-card {
+    background: linear-gradient(135deg, var(--main-bg) 70%, rgba(132, 204, 22, 0.1)) !important;
+}
+
 .stat-header {
     display: flex;
     justify-content: space-between;
@@ -756,9 +801,31 @@ body {
 /* Middle Section */
 .middle-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
     gap: 16px;
     margin-bottom: 20px;
+}
+
+@media (min-width: 1025px) {
+    .middle-grid {
+        grid-template-columns: repeat(3, 1fr);
+    }
+}
+
+/* Compliance & Reusable Two-Column Grid */
+.compliance-grid,
+.two-col-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 16px;
+    margin-bottom: 20px;
+}
+
+@media (min-width: 1025px) {
+    .compliance-grid,
+    .two-col-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
 }
 
 .card {
@@ -1246,7 +1313,9 @@ tr:hover {
 .modern-action-btn {
     background: transparent;
     border: none;
-    padding: 6px;
+    width: 32px;
+    height: 32px;
+    padding: 0;
     cursor: pointer;
     font-size: 1.05rem;
     color: #94A3B8; /* Default gray */
