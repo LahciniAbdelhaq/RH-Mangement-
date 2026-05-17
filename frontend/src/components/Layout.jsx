@@ -11,6 +11,7 @@ export default function AppLayout() {
   const [isNotifOpen, setIsNotifOpen] = useState(false);
   const { theme, toggleTheme } = useTheme();
   const { t, i18n } = useTranslation();
+  const isDark = theme === 'dark';
   
   const toggleLanguage = () => {
     const nextLang = i18n.language === 'fr' ? 'en' : 'fr';
@@ -63,12 +64,27 @@ export default function AppLayout() {
       <Sidebar collapsed={collapsed} setCollapsed={setCollapsed} />
       <main className="main-content" style={{ padding: 0, display: 'flex', flexDirection: 'column' }}>
         {/* Top bar for global actions */}
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', height: '70px', minHeight: '70px', padding: '0 24px', borderBottom: '1px solid var(--border-color)', backgroundColor: 'var(--main-bg)', zIndex: 10 }}>
+        {/* Top bar for global actions */}
+        <div style={{ 
+          display: 'flex', 
+          justifyContent: 'space-between', 
+          alignItems: 'center', 
+          height: '70px', 
+          minHeight: '70px', 
+          padding: '0 24px', 
+          borderBottom: `1px solid ${isDark ? '#334155' : '#e2e8f0'}`, 
+          backgroundColor: isDark ? 'rgba(15, 23, 42, 0.8)' : 'rgba(255, 255, 255, 0.8)', 
+          backdropFilter: 'blur(12px)',
+          WebkitBackdropFilter: 'blur(12px)',
+          zIndex: 10,
+          position: 'sticky',
+          top: 0
+        }}>
           <button className="mobile-toggle" onClick={() => setCollapsed(false)}>
             <i className="fas fa-bars"></i>
           </button>
           
-          <div style={{ display: 'flex', alignItems: 'center', gap: '20px', marginLeft: 'auto' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '16px', marginLeft: 'auto' }}>
             {/* Notifications & Date */}
             <div className="header-actions" style={{ margin: 0, display: 'flex', alignItems: 'center', gap: '12px' }}>
               {/* Language Toggle (Always Visible on Desktop & Mobile) */}
@@ -82,14 +98,15 @@ export default function AppLayout() {
                   gap: '6px', 
                   padding: '0 12px', 
                   height: '36px', 
-                  borderRadius: '18px', 
-                  border: '1px solid var(--border-color)', 
-                  background: 'var(--main-bg)', 
+                  borderRadius: '10px', 
+                  border: `1px solid ${isDark ? '#475569' : '#cbd5e1'}`, 
+                  background: isDark ? '#1e293b' : '#ffffff', 
                   cursor: 'pointer', 
-                  color: 'var(--text-gray)', 
+                  color: 'var(--text-dark)', 
                   transition: 'all 0.2s', 
                   fontSize: '0.8rem', 
-                  fontWeight: 700 
+                  fontWeight: 700,
+                  boxShadow: '0 1px 2px rgba(0,0,0,0.05)'
                 }}
               >
                 <i className="fas fa-globe" style={{ color: 'var(--primary)' }}></i>
@@ -98,18 +115,31 @@ export default function AppLayout() {
 
               <div 
                 ref={notifRef}
-                className="action-icon" 
                 onClick={() => { setIsNotifOpen(!isNotifOpen); setIsProfileOpen(false); }}
-                style={{ position: 'relative' }}
+                style={{ 
+                  position: 'relative',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  width: '36px',
+                  height: '36px',
+                  borderRadius: '10px',
+                  border: `1px solid ${isDark ? '#475569' : '#cbd5e1'}`,
+                  background: isDark ? '#1e293b' : '#ffffff',
+                  cursor: 'pointer',
+                  transition: 'all 0.2s',
+                  boxShadow: '0 1px 2px rgba(0,0,0,0.05)',
+                  color: isNotifOpen ? 'var(--primary)' : 'var(--text-dark)'
+                }}
               >
-                <i className={`far fa-bell ${isNotifOpen ? 'fas' : ''}`} style={{ color: isNotifOpen ? 'var(--primary)' : 'var(--text-gray)' }}></i>
+                <i className={`far fa-bell ${isNotifOpen ? 'fas' : ''}`}></i>
                 {unreadCount > 0 && <div className="indicator"></div>}
 
                 {/* Notifications Dropdown */}
                 {isNotifOpen && (
-                  <div style={{ position: 'absolute', top: 'calc(100% + 20px)', right: '-80px', width: '320px', backgroundColor: 'var(--main-bg)', border: '1px solid var(--border-color)', borderRadius: 'var(--radius-lg)', boxShadow: 'var(--shadow-dropdown)', zIndex: 100, overflow: 'hidden' }}>
+                  <div style={{ position: 'absolute', top: 'calc(100% + 12px)', right: '-80px', width: '320px', backgroundColor: 'var(--main-bg)', border: '1px solid var(--border-color)', borderRadius: 'var(--radius-lg)', boxShadow: 'var(--shadow-dropdown)', zIndex: 100, overflow: 'hidden' }}>
                     <div style={{ padding: '16px', borderBottom: '1px solid var(--border-color)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                      <span style={{ fontWeight: 600, fontSize: '0.95rem' }}>{t('topbar.notifications')}</span>
+                      <span style={{ fontWeight: 600, fontSize: '0.95rem', color: 'var(--text-dark)' }}>{t('topbar.notifications')}</span>
                       <button 
                         onClick={(e) => { e.stopPropagation(); setNotifications(notifications.map(n => ({...n, unread: false}))); }}
                         style={{ background: 'none', border: 'none', color: 'var(--primary)', fontSize: '0.75rem', fontWeight: 600, cursor: 'pointer' }}
@@ -147,8 +177,23 @@ export default function AppLayout() {
                   </div>
                 )}
               </div>
-              <div className="date-pill">
-                <i className="far fa-calendar"></i>
+              
+              {/* Date Pill */}
+              <div style={{ 
+                display: 'flex', 
+                alignItems: 'center', 
+                gap: '8px', 
+                padding: '0 12px', 
+                height: '36px', 
+                borderRadius: '10px', 
+                border: `1px solid ${isDark ? '#475569' : '#cbd5e1'}`, 
+                background: isDark ? '#1e293b' : '#ffffff', 
+                color: 'var(--text-dark)',
+                fontSize: '0.85rem',
+                fontWeight: 600,
+                boxShadow: '0 1px 2px rgba(0,0,0,0.05)'
+              }}>
+                <i className="far fa-calendar" style={{ color: 'var(--primary)' }}></i>
                 {new Date().toLocaleDateString(i18n.language === 'fr' ? 'fr-FR' : 'en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
               </div>
             </div>
@@ -158,24 +203,49 @@ export default function AppLayout() {
               className="hide-on-mobile"
               onClick={toggleTheme} 
               title={theme === 'light' ? t('sidebar.darkMode') : t('sidebar.lightMode')} 
-              style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: '40px', height: '40px', borderRadius: '50%', border: '1px solid var(--border-color)', background: 'var(--main-bg)', cursor: 'pointer', color: 'var(--text-gray)', transition: 'all 0.2s' }}
+              style={{ 
+                display: 'flex', 
+                alignItems: 'center', 
+                justifyContent: 'center', 
+                width: '36px', 
+                height: '36px', 
+                borderRadius: '10px', 
+                border: `1px solid ${isDark ? '#475569' : '#cbd5e1'}`, 
+                background: isDark ? '#1e293b' : '#ffffff', 
+                cursor: 'pointer', 
+                color: 'var(--text-dark)', 
+                transition: 'all 0.2s',
+                boxShadow: '0 1px 2px rgba(0,0,0,0.05)'
+              }}
             >
               <i className={theme === 'light' ? 'fas fa-moon' : 'fas fa-sun'}></i>
             </button>
 
             {/* Divider */}
-            <div className="hide-on-mobile" style={{ width: '1px', height: '32px', backgroundColor: 'var(--border-color)', margin: '0 4px' }}></div>
+            <div className="hide-on-mobile" style={{ width: '1px', height: '24px', backgroundColor: 'var(--border-color)', margin: '0 4px' }}></div>
 
             {/* User Profile with Dropdown */}
             <div className="hide-on-mobile" style={{ position: 'relative' }} ref={profileRef}>
               <div 
                 onClick={() => setIsProfileOpen(!isProfileOpen)}
-                style={{ display: 'flex', alignItems: 'center', gap: '12px', cursor: 'pointer', padding: '4px 8px', borderRadius: '8px', transition: 'background-color 0.2s', backgroundColor: isProfileOpen ? 'var(--sidebar-bg)' : 'transparent' }}
+                style={{ 
+                  display: 'flex', 
+                  alignItems: 'center', 
+                  gap: '12px', 
+                  cursor: 'pointer', 
+                  padding: '4px 12px', 
+                  paddingLeft: '4px',
+                  borderRadius: '10px', 
+                  border: `1px solid ${isDark ? '#475569' : '#cbd5e1'}`,
+                  backgroundColor: isDark ? '#1e293b' : '#ffffff',
+                  transition: 'all 0.2s',
+                  boxShadow: '0 1px 2px rgba(0,0,0,0.05)'
+                }}
               >
-                 <img src={user.avatar} alt="User" style={{ width: '40px', height: '40px', borderRadius: '50%', border: '2px solid var(--primary-bg)', objectFit: 'cover' }} />
+                 <img src={user.avatar} alt="User" style={{ width: '32px', height: '32px', borderRadius: '8px', border: '1px solid var(--border-color)', objectFit: 'cover' }} />
                  <div style={{ display: 'flex', flexDirection: 'column' }}>
-                   <span style={{ fontSize: '0.9rem', fontWeight: 600, color: 'var(--text-dark)', lineHeight: '1.2' }}>{user.name}</span>
-                   <span style={{ fontSize: '0.75rem', color: 'var(--text-gray)' }}>{roleLabel}</span>
+                   <span style={{ fontSize: '0.85rem', fontWeight: 600, color: 'var(--text-dark)', lineHeight: '1.2' }}>{user.name}</span>
+                   <span style={{ fontSize: '0.7rem', color: 'var(--text-gray)' }}>{roleLabel}</span>
                  </div>
                  <i className={`fas fa-chevron-${isProfileOpen ? 'up' : 'down'}`} style={{ fontSize: '0.8rem', color: 'var(--text-gray)', marginLeft: '4px' }}></i>
               </div>
