@@ -3,6 +3,7 @@ import { motion } from 'framer-motion';
 import Modal from '../components/Modal';
 import { useToast } from '../context/ToastContext';
 import { jsPDF } from 'jspdf';
+import { GraduationCap, Scale } from 'lucide-react';
 
 const Compliance = () => {
   const { showToast } = useToast();
@@ -237,9 +238,11 @@ const Compliance = () => {
       <div className="compliance-grid">
         {/* Training Compliance */}
         <div className="card">
-          <div className="card-title">
-            <i className="fas fa-graduation-cap" style={{ color: 'var(--primary)' }}></i>
-            Formations Obligatoires
+          <div className="card-title" style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+            <span style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: 36, height: 36, borderRadius: '10px', background: 'rgba(37,99,235,0.1)', color: '#2563eb' }}>
+              <GraduationCap size={18} />
+            </span>
+            <span>Formations Obligatoires</span>
           </div>
           
           <div className="progress-item">
@@ -275,9 +278,11 @@ const Compliance = () => {
 
         {/* Legal & Regulatory */}
         <div className="card">
-          <div className="card-title">
-            <i className="fas fa-balance-scale" style={{ color: 'var(--primary)' }}></i>
-            Légal & Réglementaire
+          <div className="card-title" style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+            <span style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: 36, height: 36, borderRadius: '10px', background: 'rgba(16,185,129,0.1)', color: '#10b981' }}>
+              <Scale size={18} />
+            </span>
+            <span>Légal & Réglementaire</span>
           </div>
           
           <div className="progress-item">

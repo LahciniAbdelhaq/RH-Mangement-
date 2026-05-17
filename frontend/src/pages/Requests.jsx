@@ -6,7 +6,7 @@ import { useToast } from '../context/ToastContext';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../context/AuthContext';
 import { logSystemActivity } from '../utils/rbac';
-import { FileText, Clock, AlertTriangle, CheckCircle2, User, Building2, Calendar, Download, Eye, Check, X, FileSignature } from 'lucide-react';
+import { FileText, Clock, AlertTriangle, CheckCircle2, User, Building2, Calendar, Download, Eye, Check, X, FileSignature, Loader2 } from 'lucide-react';
 import { jsPDF } from 'jspdf';
 
 const Requests = () => {
@@ -313,6 +313,7 @@ const Requests = () => {
                 <th>{t('requests.table.department')}</th>
                 <th>{t('requests.table.owner')}</th>
                 <th>Mise à jour</th>
+                <th></th>
                 <th style={{ textAlign: 'center' }}>{t('requests.table.actions')}</th>
               </tr>
             </thead>
@@ -340,6 +341,11 @@ const Requests = () => {
                     </div>
                   </td>
                   <td style={{ color: 'var(--text-gray)', fontSize: '0.85rem' }}>{req.date}</td>
+                  <td style={{ textAlign: 'center' }}>
+                    {req.status === 'cours' && (
+                      <Loader2 size={16} style={{ color: '#D97706', animation: 'spin 1s linear infinite' }} />
+                    )}
+                  </td>
 
                   <td style={{ textAlign: 'center' }}>
                     <div className="table-actions" style={{ justifyContent: 'center' }}>
@@ -534,6 +540,7 @@ const Requests = () => {
         </div>
         )}
       </Modal>
+      <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
     </motion.div>
   );
 };
