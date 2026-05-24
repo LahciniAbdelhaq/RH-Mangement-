@@ -43,15 +43,7 @@ const Settings = () => {
   };
 
   const getDefaultFormData = () => {
-    const saved = localStorage.getItem('hr_profile_data');
-    if (saved) {
-      try {
-        return JSON.parse(saved);
-      } catch (e) {
-        console.error(e);
-      }
-    }
-    return {
+    const defaults = {
       prenom: user?.name?.split(' ')[0] || 'Sarah',
       nom: user?.name?.split(' ')[1] || 'Connor',
       email: user?.email || 'sarah.connor@entreprise.com',
@@ -67,6 +59,15 @@ const Settings = () => {
       employeeRequests: true,
       complianceAlerts: false
     };
+    const saved = localStorage.getItem('hr_profile_data');
+    if (saved) {
+      try {
+        return { ...defaults, ...JSON.parse(saved) };
+      } catch (e) {
+        console.error(e);
+      }
+    }
+    return defaults;
   };
 
   const [formData, setFormData] = useState(getDefaultFormData);
@@ -221,17 +222,6 @@ const Settings = () => {
           {activeTab === 'profil' && (
             <div>
               <h3 style={{ fontSize: '1.1rem', marginBottom: '16px', borderBottom: '1px solid var(--border-color)', paddingBottom: '12px' }}>{t('settings.tabs.editProfile')}</h3>
-              
-              <div style={{ display: 'flex', gap: '24px', marginBottom: '16px' }}>
-                <img src={user?.avatar || "https://ui-avatars.com/api/?name=Sarah+Connor&background=2563EB&color=fff&size=128"} alt="Profile" style={{ width: '80px', height: '80px', borderRadius: '50%' }} />
-                <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center', gap: '12px' }}>
-                  <div style={{ display: 'flex', gap: '8px' }}>
-                    <button className="action-btn" onClick={() => showToast('Photo de profil mise à jour', 'success')}>{t('settings.profile.uploadPhoto')}</button>
-                    <button className="action-btn" style={{ color: 'var(--danger)' }} onClick={() => showToast('Photo de profil supprimée', 'success')}>{t('settings.profile.delete')}</button>
-                  </div>
-                  <p style={{ fontSize: '0.8rem', color: 'var(--text-gray)' }}>{t('settings.profile.photoLimits')}</p>
-                </div>
-              </div>
 
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px', marginBottom: '20px' }}>
                 <div>
@@ -673,11 +663,19 @@ const Settings = () => {
                       <Key style={{ position: 'absolute', left: 14, top: '50%', transform: 'translateY(-50%)', width: 18, height: 18, color: '#f59e0b', zIndex: 5 }} />
                       <input 
                         type={showNewPassword ? "text" : "password"} 
+                        placeholder="Min. 8 caractères"
                         value={passwordForm.new}
                         onChange={(e) => setPasswordForm({ ...passwordForm, new: e.target.value })}
-                        style={{ ...inputStyle, paddingRight: '44px' }} 
+                        style={{ 
+                          ...inputStyle, 
+                          paddingRight: '44px',
+                          borderColor: passwordForm.new.length > 0 && passwordForm.new.length < 8 ? '#ef4444' : (passwordForm.new.length >= 8 ? '#10b981' : (isDark ? '#334155' : '#e2e8f0')),
+                          boxShadow: passwordForm.new.length > 0 && passwordForm.new.length < 8 ? '0 0 0 3px rgba(239,68,68,.08)' : (passwordForm.new.length >= 8 ? '0 0 0 3px rgba(16,185,129,.08)' : 'none')
+                        }} 
                         onFocus={onFocus}
-                        onBlur={onBlur}
+                        onBlur={(e) => { 
+                          if (!passwordForm.new) { e.target.style.borderColor = isDark ? '#334155' : '#e2e8f0'; e.target.style.boxShadow = 'none'; }
+                        }}
                       />
                       <button
                         type="button"
@@ -687,6 +685,16 @@ const Settings = () => {
                         {showNewPassword ? <EyeOff style={{ width: 18, height: 18 }} /> : <Eye style={{ width: 18, height: 18 }} />}
                       </button>
                     </div>
+                    {passwordForm.new.length > 0 && passwordForm.new.length < 8 && (
+                      <p style={{ fontSize: '0.72rem', color: '#ef4444', marginTop: '6px', fontWeight: 500, display: 'flex', alignItems: 'center', gap: 4 }}>
+                        <Lock style={{ width: 11, height: 11 }} /> Minimum 8 caractères requis
+                      </p>
+                    )}
+                    {passwordForm.new.length >= 8 && (
+                      <p style={{ fontSize: '0.72rem', color: '#10b981', marginTop: '6px', fontWeight: 500, display: 'flex', alignItems: 'center', gap: 4 }}>
+                        <Check style={{ width: 11, height: 11 }} /> Mot de passe valide
+                      </p>
+                    )}
                   </div>
                   <div>
                     <label style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 13, fontWeight: 700, color: isDark ? '#cbd5e1' : '#374151', marginBottom: 8 }}>
@@ -697,11 +705,19 @@ const Settings = () => {
                       <Key style={{ position: 'absolute', left: 14, top: '50%', transform: 'translateY(-50%)', width: 18, height: 18, color: '#10b981', zIndex: 5 }} />
                       <input 
                         type={showConfirmPassword ? "text" : "password"} 
+                        placeholder="Confirmez le mot de passe"
                         value={passwordForm.confirm}
                         onChange={(e) => setPasswordForm({ ...passwordForm, confirm: e.target.value })}
-                        style={{ ...inputStyle, paddingRight: '44px' }} 
+                        style={{ 
+                          ...inputStyle, 
+                          paddingRight: '44px',
+                          borderColor: passwordForm.confirm.length > 0 ? (passwordForm.confirm === passwordForm.new ? '#10b981' : '#ef4444') : (isDark ? '#334155' : '#e2e8f0'),
+                          boxShadow: passwordForm.confirm.length > 0 ? (passwordForm.confirm === passwordForm.new ? '0 0 0 3px rgba(16,185,129,.08)' : '0 0 0 3px rgba(239,68,68,.08)') : 'none'
+                        }} 
                         onFocus={onFocus}
-                        onBlur={onBlur}
+                        onBlur={(e) => { 
+                          if (!passwordForm.confirm) { e.target.style.borderColor = isDark ? '#334155' : '#e2e8f0'; e.target.style.boxShadow = 'none'; }
+                        }}
                       />
                       <button
                         type="button"
@@ -711,10 +727,20 @@ const Settings = () => {
                         {showConfirmPassword ? <EyeOff style={{ width: 18, height: 18 }} /> : <Eye style={{ width: 18, height: 18 }} />}
                       </button>
                     </div>
+                    {passwordForm.confirm.length > 0 && passwordForm.confirm !== passwordForm.new && (
+                      <p style={{ fontSize: '0.72rem', color: '#ef4444', marginTop: '6px', fontWeight: 500, display: 'flex', alignItems: 'center', gap: 4 }}>
+                        <AlertTriangle style={{ width: 11, height: 11 }} /> Les mots de passe ne correspondent pas
+                      </p>
+                    )}
+                    {passwordForm.confirm.length > 0 && passwordForm.confirm === passwordForm.new && (
+                      <p style={{ fontSize: '0.72rem', color: '#10b981', marginTop: '6px', fontWeight: 500, display: 'flex', alignItems: 'center', gap: 4 }}>
+                        <Check style={{ width: 11, height: 11 }} /> Les mots de passe correspondent
+                      </p>
+                    )}
                   </div>
                 </div>
               </div>
-              <button className="action-btn primary" style={{ marginBottom: '24px', display: 'flex', alignItems: 'center', gap: '8px', opacity: isPasswordReady ? 1 : 0.45, cursor: isPasswordReady ? 'pointer' : 'not-allowed', transition: 'opacity 0.2s' }} onClick={handlePasswordUpdate} disabled={!isPasswordReady}>
+              <button className="action-btn primary" style={{ marginBottom: '24px', display: 'flex', alignItems: 'center', gap: '8px', opacity: isPasswordReady && passwordForm.new.length >= 8 && passwordForm.new === passwordForm.confirm ? 1 : 0.45, cursor: isPasswordReady && passwordForm.new.length >= 8 && passwordForm.new === passwordForm.confirm ? 'pointer' : 'not-allowed', transition: 'opacity 0.2s' }} onClick={handlePasswordUpdate} disabled={!isPasswordReady || passwordForm.new.length < 8 || passwordForm.new !== passwordForm.confirm}>
                 <Key style={{ width: 16, height: 16 }} /> {t('settings.securityTab.updateBtn')}
               </button>
               
