@@ -42,7 +42,7 @@ const Settings = () => {
     logSystemActivity("Nettoyage des logs", user?.name, "Effacement de l'ensemble du journal d'audit");
   };
 
-  const [formData, setFormData] = useState(() => {
+  const getDefaultFormData = () => {
     const saved = localStorage.getItem('hr_profile_data');
     if (saved) {
       try {
@@ -67,10 +67,19 @@ const Settings = () => {
       employeeRequests: true,
       complianceAlerts: false
     };
-  });
+  };
+
+  const [formData, setFormData] = useState(getDefaultFormData);
+  const [initialFormData, setInitialFormData] = useState(getDefaultFormData);
+  const [passwordForm, setPasswordForm] = useState({ current: '', new: '', confirm: '' });
+
+  const isProfileDirty = JSON.stringify(formData) !== JSON.stringify(initialFormData);
+  const isPasswordReady = passwordForm.current.length > 0 && passwordForm.new.length > 0 && passwordForm.confirm.length > 0;
 
   const handleSave = () => {
+    if (!isProfileDirty) return;
     localStorage.setItem('hr_profile_data', JSON.stringify(formData));
+    setInitialFormData({ ...formData });
     if (setUser && user) {
       setUser({
         ...user,
@@ -85,7 +94,7 @@ const Settings = () => {
   const [showNewPassword, setShowNewPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
-  const [passwordForm, setPasswordForm] = useState({ current: '', new: '', confirm: '' });
+
 
   const handlePasswordUpdate = () => {
     if (!passwordForm.current || !passwordForm.new || !passwordForm.confirm) {
@@ -176,7 +185,7 @@ const Settings = () => {
           <p>{t('settings.subtitle')}</p>
         </div>
         <div className="header-actions">
-          <button className="action-btn primary" onClick={handleSave}>
+          <button className="action-btn primary" onClick={handleSave} disabled={!isProfileDirty} style={{ opacity: isProfileDirty ? 1 : 0.45, cursor: isProfileDirty ? 'pointer' : 'not-allowed', transition: 'opacity 0.2s' }}>
             <i className="fas fa-save"></i> {t('settings.saveAllBtn')}
           </button>
         </div>
@@ -705,7 +714,7 @@ const Settings = () => {
                   </div>
                 </div>
               </div>
-              <button className="action-btn primary" style={{ marginBottom: '24px', display: 'flex', alignItems: 'center', gap: '8px' }} onClick={handlePasswordUpdate}>
+              <button className="action-btn primary" style={{ marginBottom: '24px', display: 'flex', alignItems: 'center', gap: '8px', opacity: isPasswordReady ? 1 : 0.45, cursor: isPasswordReady ? 'pointer' : 'not-allowed', transition: 'opacity 0.2s' }} onClick={handlePasswordUpdate} disabled={!isPasswordReady}>
                 <Key style={{ width: 16, height: 16 }} /> {t('settings.securityTab.updateBtn')}
               </button>
               
@@ -718,7 +727,30 @@ const Settings = () => {
                   <div style={{ fontWeight: 600, color: isDark ? '#f1f5f9' : '#0f172a' }}>{t('settings.securityTab.secureAccount')}</div>
                   <div style={{ fontSize: '0.85rem', color: 'var(--text-gray)', marginTop: '4px' }}>{t('settings.securityTab.secureAccountDesc')}</div>
                 </div>
-                <button className="action-btn" style={{ borderColor: 'var(--primary)', color: 'var(--primary)' }} onClick={() => showToast('Authentification à deux facteurs activée', 'success')}>{t('settings.securityTab.enableBtn')}</button>
+                <button 
+                  className="action-btn" 
+                  onClick={() => showToast('Authentification à deux facteurs activée', 'success')}
+                  style={{ 
+                    background: 'linear-gradient(135deg, #f59e0b, #d97706)', 
+                    color: '#ffffff', 
+                    border: 'none', 
+                    padding: '10px 20px', 
+                    borderRadius: '10px', 
+                    fontWeight: 700, 
+                    fontSize: '0.85rem',
+                    display: 'flex', 
+                    alignItems: 'center', 
+                    gap: '8px', 
+                    cursor: 'pointer',
+                    boxShadow: '0 4px 12px rgba(245,158,11,0.25)',
+                    transition: 'all 0.2s',
+                    whiteSpace: 'nowrap'
+                  }}
+                  onMouseEnter={(e) => { e.currentTarget.style.transform = 'translateY(-1px)'; e.currentTarget.style.boxShadow = '0 6px 16px rgba(245,158,11,0.35)'; }}
+                  onMouseLeave={(e) => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = '0 4px 12px rgba(245,158,11,0.25)'; }}
+                >
+                  <Shield style={{ width: 15, height: 15 }} /> {t('settings.securityTab.enableBtn')}
+                </button>
               </div>
             </div>
           )}
