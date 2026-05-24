@@ -7,6 +7,7 @@ import Modal from '../components/Modal';
 import Pagination from '../components/Pagination';
 import { triggerWorkflowNotification, logSystemActivity } from '../utils/rbac';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
+import { MOROCCAN_CITIES } from '../utils/cities';
 
 const MOCK_TRAININGS = [
   { id: 'FRM-001', title: 'ReactJS Avancé', domain: 'Informatique', trainer: 'Jean Martin', startDate: '2026-06-10', endDate: '2026-06-12', location: 'Casablanca', maxParticipants: 15, participants: ['Ali Benali', 'Sara Hamidi', 'Karim Ouali'], status: 'planned' },
@@ -265,7 +266,12 @@ export default function Trainings() {
             </div>
             <div className="form-group" style={{ marginBottom: 0 }}>
               <label className="form-label">{t('trainings.modal.location')}</label>
-              <input type="text" name="location" className="form-input" placeholder={t('trainings.modal.locationPlaceholder')} value={form.location} onChange={handleFormChange} />
+              <select name="location" className="form-input" value={form.location} onChange={handleFormChange}>
+                <option value="">Sélectionner...</option>
+                {MOROCCAN_CITIES.map(city => (
+                  <option key={city} value={city}>{city}</option>
+                ))}
+              </select>
             </div>
             <div className="form-group" style={{ marginBottom: 0 }}>
               <label className="form-label">{t('trainings.modal.maxPart')}</label>

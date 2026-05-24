@@ -7,15 +7,7 @@ import { useTheme } from '../context/ThemeContext';
 import { User, Mail, Phone, MapPin, Clock, Calendar, Briefcase, Shield, Globe, Users, Bell, AlertTriangle, Lock, Key, Eye, EyeOff, Loader2, Check, Link2 } from 'lucide-react';
 import { logSystemActivity } from '../utils/rbac';
 
-const moroccanCities = [
-  "Casablanca", "Rabat", "Marrakech", "Tanger", "Fès", "Agadir", "Meknès", "Oujda", 
-  "Tétouan", "Kénitra", "Safi", "Nador", "Laâyoune", "Dakhla", "Khouribga", "El Jadida", 
-  "Béni Mellal", "Taza", "Mohammédia", "Khemisset", "Taourirt", "Taroudant", "Berkane", 
-  "Guelmim", "Fkih Ben Salah", "Ouarzazate", "Al Hoceima", "Tinghir", "Sidi Kacem", 
-  "Sidi Slimane", "Errachidia", "Midelt", "Azrou", "Ifrane", "Larache", "Ksar El Kebir", 
-  "Chefchaouen", "Asilah", "Essaouira", "Tiznit", "Tan-Tan", "Boujdour", "Smara", 
-  "Youssoufia", "Benguerir", "Sefrou", "Kalaat Sraghna"
-];
+import { MOROCCAN_CITIES } from '../utils/cities';
 
 const Settings = () => {
   const { showToast } = useToast();
@@ -124,7 +116,7 @@ const Settings = () => {
   const [showLocationDropdown, setShowLocationDropdown] = useState(false);
   const [locationSearch, setLocationSearch] = useState('');
 
-  const filteredCities = moroccanCities.filter(city => 
+  const filteredCities = MOROCCAN_CITIES.filter(city => 
     city.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").includes(
       locationSearch.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "")
     )

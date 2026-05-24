@@ -5,6 +5,7 @@ import { motion } from 'framer-motion';
 import { useToast } from '../context/ToastContext';
 import { useTranslation } from 'react-i18next';
 import { User, Mail, ShieldCheck, Key, Lock, AlertTriangle } from 'lucide-react';
+import { MOROCCAN_CITIES } from '../utils/cities';
 
 const Users = () => {
   const { showToast } = useToast();
@@ -283,19 +284,9 @@ const Users = () => {
               <label className="form-label" style={{ fontSize: '0.75rem', display: 'flex', alignItems: 'center', gap: '4px' }}><i className="fas fa-map-marker-alt" style={{ color: 'var(--text-gray)' }}></i> {t('users.modal.location')}</label>
               <select className="form-input" value={addForm.location} onChange={e => setAddForm({...addForm, location: e.target.value})}>
                 <option value="">Sélectionner...</option>
-                <option value="Casablanca">Casablanca</option>
-                <option value="Rabat">Rabat</option>
-                <option value="Marrakech">Marrakech</option>
-                <option value="Fès">Fès</option>
-                <option value="Tanger">Tanger</option>
-                <option value="Agadir">Agadir</option>
-                <option value="Meknès">Meknès</option>
-                <option value="Oujda">Oujda</option>
-                <option value="Kenitra">Kenitra</option>
-                <option value="Tétouan">Tétouan</option>
-                <option value="Safi">Safi</option>
-                <option value="Mohammedia">Mohammedia</option>
-                <option value="El Jadida">El Jadida</option>
+                {MOROCCAN_CITIES.map(city => (
+                  <option key={city} value={city}>{city}</option>
+                ))}
               </select>
             </div>
             <div className="form-group" style={{ marginBottom: '10px', gridColumn: 'span 3' }}>
@@ -374,19 +365,9 @@ const Users = () => {
                 <label className="form-label" style={{ fontSize: '0.75rem', display: 'flex', alignItems: 'center', gap: '4px' }}><i className="fas fa-map-marker-alt" style={{ color: 'var(--text-gray)' }}></i> {t('users.modal.location')}</label>
                 <select className="form-input" value={editForm.location} onChange={e => setEditForm({...editForm, location: e.target.value})}>
                   <option value="">Sélectionner...</option>
-                  <option value="Casablanca">Casablanca</option>
-                  <option value="Rabat">Rabat</option>
-                  <option value="Marrakech">Marrakech</option>
-                  <option value="Fès">Fès</option>
-                  <option value="Tanger">Tanger</option>
-                  <option value="Agadir">Agadir</option>
-                  <option value="Meknès">Meknès</option>
-                  <option value="Oujda">Oujda</option>
-                  <option value="Kenitra">Kenitra</option>
-                  <option value="Tétouan">Tétouan</option>
-                  <option value="Safi">Safi</option>
-                  <option value="Mohammedia">Mohammedia</option>
-                  <option value="El Jadida">El Jadida</option>
+                  {MOROCCAN_CITIES.map(city => (
+                    <option key={city} value={city}>{city}</option>
+                  ))}
                 </select>
               </div>
             </div>
