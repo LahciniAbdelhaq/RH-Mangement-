@@ -93,7 +93,7 @@ const LeaveManagement = () => {
     };
 
     setAbsences(prev => [newAbsence, ...prev]);
-    showToast('Demande de congé enregistrée avec succès !', 'success');
+    showToast(i18n.language === 'fr' ? 'Demande de congé enregistrée avec succès !' : 'Leave request recorded successfully!', 'success');
     logSystemActivity("Demande Congé", user?.name, `Demande de congé: ${newAbsence.duration} (${newAbsence.type})`);
     setLeaveForm({ type: 'Congé Annuel', start: '', end: '', motif: '' });
     setIsLeaveModalOpen(false);
@@ -102,7 +102,7 @@ const LeaveManagement = () => {
   const onApprove = (id, e) => {
     if(e) e.stopPropagation();
     setAbsences(prev => prev.map(abs => abs.id === id ? { ...abs, status: 'Approuvé' } : abs));
-    showToast(isDeptManager ? 'Congé validé par le département.' : 'Congé approuvé avec succès.', 'success');
+    showToast(i18n.language === 'fr' ? (isDeptManager ? 'Congé validé par le département.' : 'Congé approuvé avec succès.') : (isDeptManager ? 'Leave validated by department.' : 'Leave approved successfully.'), 'success');
     logSystemActivity("Approbation Congé", user?.name, `Congé approuvé pour la demande #${id}`);
     setIsViewModalOpen(false);
   };
@@ -110,13 +110,13 @@ const LeaveManagement = () => {
   const onReject = (id, e) => {
     if(e) e.stopPropagation();
     setAbsences(prev => prev.map(abs => abs.id === id ? { ...abs, status: 'Rejeté' } : abs));
-    showToast('La demande de congé a été rejetée.', 'error');
+    showToast(i18n.language === 'fr' ? 'La demande de congé a été rejetée.' : 'Leave request has been rejected.', 'error');
     logSystemActivity("Rejet Congé", user?.name, `Congé rejeté pour la demande #${id}`);
     setIsViewModalOpen(false);
   };
 
   const onEditSubmit = () => {
-    showToast('Absence mise à jour !', 'info');
+    showToast(i18n.language === 'fr' ? 'Absence mise à jour !' : 'Absence updated!', 'info');
     setIsEditModalOpen(false);
   };
 

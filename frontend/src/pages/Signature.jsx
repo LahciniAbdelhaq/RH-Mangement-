@@ -269,6 +269,11 @@ export default function Signature() {
           <div className="stat-value">{pendingDocs.length + signedDocs.length}</div>
           <div className="stat-label">Total traités</div>
         </div>
+        <div className="stat-card amber-card">
+          <div className="stat-header"><div className="stat-icon warning"><i className="fas fa-exclamation-triangle"></i></div></div>
+          <div className="stat-value">{pendingDocs.length > 0 ? 1 : 0}</div>
+          <div className="stat-label">Priorité Haute</div>
+        </div>
       </div>
 
       {/* Tabs */}

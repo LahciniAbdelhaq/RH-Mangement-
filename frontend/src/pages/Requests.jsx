@@ -83,7 +83,7 @@ const Requests = () => {
       formatLabel = 'PDF';
     }
 
-    showToast(`Préparation de l'export de "${row.title}" au format ${formatLabel}...`, 'info');
+    showToast(i18n.language === 'fr' ? `Préparation de l'export de "${row.title}" au format ${formatLabel}...` : `Preparing export for "${row.title}" in ${formatLabel} format...`, 'info');
     logSystemActivity("Génération PDF", user?.name, `Génération du document: ${row.title} pour ${row.owner}`);
     
     setTimeout(() => {
@@ -190,7 +190,7 @@ const Requests = () => {
             doc.text("CACHET ET SIGNATURE", 150, 258, { align: "center" });
 
             doc.save(`${row.title.replace(/\s+/g, '_')}_${row.owner.replace(/\s+/g, '_')}.pdf`);
-            showToast(`Document "${row.title}" téléchargé avec succès`, 'success');
+            showToast(i18n.language === 'fr' ? `Document "${row.title}" téléchargé avec succès` : `Document "${row.title}" downloaded successfully`, 'success');
           };
 
           img.onload = () => generatePDF(true);
@@ -207,10 +207,10 @@ const Requests = () => {
           link.click();
           document.body.removeChild(link);
           URL.revokeObjectURL(url);
-          showToast(`Document "${row.title}" téléchargé avec succès`, 'success');
+          showToast(i18n.language === 'fr' ? `Document "${row.title}" téléchargé avec succès` : `Document "${row.title}" downloaded successfully`, 'success');
         }
       } catch (err) {
-        showToast(`Erreur lors de la génération du document`, 'error');
+        showToast(i18n.language === 'fr' ? `Erreur lors de la génération du document` : `Error generating document`, 'error');
         console.error(err);
       }
     }, 1200);
@@ -234,7 +234,7 @@ const Requests = () => {
     };
     
     setRequests(prev => [newReq, ...prev]);
-    showToast('Votre demande a été soumise avec succès.', 'success');
+    showToast(i18n.language === 'fr' ? 'Votre demande a été soumise avec succès.' : 'Your request has been submitted successfully.', 'success');
     logSystemActivity("Création Demande", user?.name, `Soumission de la demande: ${newReq.title}`);
     setNewRequestForm({ type: 'Attestation de Travail', priorite: 'Normale (Délai 48h)', description: '', fichier: null });
     setIsModalOpen(false);
@@ -250,7 +250,7 @@ const Requests = () => {
     const nextStatus = isDeptManager ? 'cours' : 'terminees';
     
     setRequests(prev => prev.map(r => r.id === selectedRequest.id ? { ...r, status: nextStatus, date: 'À l\'instant' } : r));
-    showToast(isDeptManager ? 'Demande validée et transmise aux RH.' : 'La demande a été approuvée avec succès.', 'success');
+    showToast(i18n.language === 'fr' ? (isDeptManager ? 'Demande validée et transmise aux RH.' : 'La demande a été approuvée avec succès.') : (isDeptManager ? 'Request validated and sent to HR.' : 'Request approved successfully.'), 'success');
     logSystemActivity(
       isDeptManager ? "Validation Demande (N+1)" : "Approbation Demande (RH)", 
       user?.name, 
@@ -262,7 +262,7 @@ const Requests = () => {
   const onReject = () => {
     if (!selectedRequest) return;
     setRequests(prev => prev.map(r => r.id === selectedRequest.id ? { ...r, status: 'rejetees', date: 'À l\'instant' } : r));
-    showToast('La demande a été rejetée.', 'error');
+    showToast(i18n.language === 'fr' ? 'La demande a été rejetée.' : 'The request has been rejected.', 'error');
     logSystemActivity("Rejet Demande", user?.name, `Demande ${selectedRequest.title} de ${selectedRequest.owner} rejetée.`);
     setIsDetailsModalOpen(false);
   };
