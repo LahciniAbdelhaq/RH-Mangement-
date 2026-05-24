@@ -176,7 +176,7 @@ export default function Authorizations() {
             <div className="stat-value">{authorizations.filter(a => a.status === 'approved').length}</div>
             <div className="stat-label">{t('authorizations.approved')}</div>
           </div>
-          <div className="stat-card" style={{ borderTop: '3px solid #3B82F6' }}>
+          <div className="stat-card blue-card">
             <div className="stat-header"><div className="stat-icon" style={{ background: '#EFF6FF', color: '#3B82F6' }}><i className="fas fa-user-check"></i></div></div>
             <div className="stat-value">{authorizations.filter(a => a.status === 'validatedChef').length}</div>
             <div className="stat-label">{t('authorizations.validatedByChef')}</div>

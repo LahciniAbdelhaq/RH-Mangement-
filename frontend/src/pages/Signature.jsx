@@ -254,7 +254,7 @@ export default function Signature() {
 
       {/* Stats */}
       <div className="stats-grid" style={{ marginBottom: '24px' }}>
-        <div className="stat-card" style={{ borderTop: '3px solid #BE185D' }}>
+        <div className="stat-card pink-card">
           <div className="stat-header"><div className="stat-icon" style={{ background: '#FDF2F8', color: '#BE185D' }}><i className="fas fa-clock"></i></div></div>
           <div className="stat-value">{pendingDocs.length}</div>
           <div className="stat-label">En attente de signature</div>

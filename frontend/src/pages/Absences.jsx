@@ -105,7 +105,7 @@ export default function Absences() {
 
       {/* Stats */}
       <div className="stats-grid" style={{ marginBottom: '24px' }}>
-        <div className="stat-card" style={{ borderTop: '3px solid #EF4444' }}>
+        <div className="stat-card red-card">
           <div className="stat-header"><div className="stat-icon" style={{ background: '#FEF2F2', color: '#EF4444' }}><i className="fas fa-user-times"></i></div></div>
           <div className="stat-value">{totalAbsences}</div>
           <div className="stat-label">{t('absences.totalAbsences')}</div>
@@ -115,7 +115,7 @@ export default function Absences() {
           <div className="stat-value">{totalRetards}</div>
           <div className="stat-label">{t('absences.totalLate')}</div>
         </div>
-        <div className="stat-card" style={{ borderTop: '3px solid #EF4444' }}>
+        <div className="stat-card red-card">
           <div className="stat-header"><div className="stat-icon" style={{ background: '#FEF2F2', color: '#EF4444' }}><i className="fas fa-exclamation-triangle"></i></div></div>
           <div className="stat-value">{nonJustifiees}</div>
           <div className="stat-label">{t('absences.unjustified')}</div>

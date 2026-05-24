@@ -134,7 +134,7 @@ export default function Trainings() {
           <div className="stat-value">{isEmployee ? myTrainings.length : trainings.reduce((s, t) => s + t.participants.length, 0)}</div>
           <div className="stat-label">{isEmployee ? t('trainings.myEnrollments') : t('trainings.participants')}</div>
         </div>
-        <div className="stat-card" style={{ borderTop: '3px solid #3B82F6' }}>
+        <div className="stat-card blue-card">
           <div className="stat-header"><div className="stat-icon" style={{ background: '#EFF6FF', color: '#3B82F6' }}><i className="fas fa-calendar-alt"></i></div></div>
           <div className="stat-value">{trainings.filter(t => t.status === 'planned').length}</div>
           <div className="stat-label">{t('trainings.planned')}</div>

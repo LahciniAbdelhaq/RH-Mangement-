@@ -308,7 +308,7 @@ const Dashboard = () => {
         </header>
 
         <div className="stats-grid" style={{ marginBottom: '24px' }}>
-          <div className="stat-card" style={{ borderTop: '3px solid #BE185D' }}>
+          <div className="stat-card pink-card">
             <div className="stat-header"><div className="stat-icon" style={{ background: '#FDF2F8', color: '#BE185D' }}><i className="fas fa-clock"></i></div>
               <div className="stat-trend negative"><i className="fas fa-circle" style={{ fontSize: '8px' }}></i> Urgent</div>
             </div>
@@ -449,7 +449,7 @@ const Dashboard = () => {
             <div className="stat-value">4</div>
             <div className="stat-label">{t('dashboard.employee.approvedRequests')}</div>
           </div>
-          <div className="stat-card" style={{ borderTop: '3px solid #7C3AED' }}>
+          <div className="stat-card purple-card">
             <div className="stat-header">
               <div className="stat-icon" style={{ background: '#F5F3FF', color: '#7C3AED' }}><i className="fas fa-user-clock"></i></div>
             </div>
