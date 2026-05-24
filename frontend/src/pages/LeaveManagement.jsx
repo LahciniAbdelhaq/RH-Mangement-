@@ -392,7 +392,9 @@ const LeaveManagement = () => {
       >
         <form onSubmit={onLeaveSubmit} style={{ padding: '4px 0' }}>
           <div className="form-group" style={{ marginBottom: '16px' }}>
-            <label className="form-label">{i18n.language === 'fr' ? "Type d'absence" : "Absence Type"}</label>
+            <label className="form-label" style={{ fontSize: '0.7rem', display: 'flex', alignItems: 'center', gap: '4px' }}>
+              <Umbrella size={12} color="var(--primary)" /> {i18n.language === 'fr' ? "Type d'absence" : "Absence Type"}
+            </label>
             <select className="form-input" required value={leaveForm.type} onChange={(e) => setLeaveForm({...leaveForm, type: e.target.value})}>
               <option value="Congé Annuel">{i18n.language === 'fr' ? "Congé Annuel" : "Annual Leave"}</option>
               <option value="Maladie">{i18n.language === 'fr' ? "Congé Maladie" : "Sick Leave"}</option>
@@ -402,16 +404,22 @@ const LeaveManagement = () => {
           </div>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginBottom: '16px' }}>
             <div className="form-group" style={{ marginBottom: 0 }}>
-              <label className="form-label">{i18n.language === 'fr' ? "Date de début" : "Start Date"}</label>
+              <label className="form-label" style={{ fontSize: '0.7rem', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                <Calendar size={12} color="var(--success)" /> {i18n.language === 'fr' ? "Date de début" : "Start Date"}
+              </label>
               <input type="date" required className="form-input" value={leaveForm.start} onChange={(e) => setLeaveForm({...leaveForm, start: e.target.value})} />
             </div>
             <div className="form-group" style={{ marginBottom: 0 }}>
-              <label className="form-label">{i18n.language === 'fr' ? "Date de fin" : "End Date"}</label>
+              <label className="form-label" style={{ fontSize: '0.7rem', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                <Calendar size={12} color="var(--danger)" /> {i18n.language === 'fr' ? "Date de fin" : "End Date"}
+              </label>
               <input type="date" required className="form-input" value={leaveForm.end} onChange={(e) => setLeaveForm({...leaveForm, end: e.target.value})} />
             </div>
           </div>
           <div className="form-group" style={{ marginBottom: '24px' }}>
-            <label className="form-label">{i18n.language === 'fr' ? "Motif / Justification" : "Reason / Justification"}</label>
+            <label className="form-label" style={{ fontSize: '0.7rem', display: 'flex', alignItems: 'center', gap: '4px' }}>
+              <i className="fas fa-align-left" style={{ color: 'var(--text-gray)' }}></i> {i18n.language === 'fr' ? "Motif / Justification" : "Reason / Justification"}
+            </label>
             <textarea className="form-input" rows="2" placeholder={i18n.language === 'fr' ? "Raison de la demande..." : "Reason for request..."} value={leaveForm.motif} onChange={(e) => setLeaveForm({...leaveForm, motif: e.target.value})}></textarea>
           </div>
           <div style={{ display: 'flex', gap: '10px' }}>

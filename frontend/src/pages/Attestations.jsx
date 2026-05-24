@@ -339,7 +339,9 @@ export default function Attestations() {
       >
         <form onSubmit={e => { e.preventDefault(); handleRequest(); }}>
           <div className="form-group" style={{ marginBottom: '12px' }}>
-            <label className="form-label">{t('attestations.modal.docType')} *</label>
+            <label className="form-label" style={{ fontSize: '0.75rem', display: 'flex', alignItems: 'center', gap: '6px' }}>
+              <i className="fas fa-file-signature" style={{ color: '#7C3AED' }}></i> {t('attestations.modal.docType')} *
+            </label>
             <select name="type" className="form-input" value={form.type} onChange={handleFormChange}>
               <option>Attestation de Travail</option>
               <option>Attestation de Salaire</option>
@@ -347,7 +349,9 @@ export default function Attestations() {
             </select>
           </div>
           <div className="form-group" style={{ marginBottom: '12px' }}>
-            <label className="form-label">{t('attestations.modal.note')}</label>
+            <label className="form-label" style={{ fontSize: '0.75rem', display: 'flex', alignItems: 'center', gap: '6px' }}>
+              <i className="fas fa-align-left" style={{ color: 'var(--text-gray)' }}></i> {t('attestations.modal.note')}
+            </label>
             <textarea name="note" className="form-input" rows="3" placeholder={t('attestations.modal.notePlaceholder')} value={form.note} onChange={handleFormChange}></textarea>
           </div>
           <div style={{ background: '#FFFBEB', borderRadius: '10px', padding: '12px 16px', fontSize: '0.85rem', color: '#92400E', fontWeight: 500 }}>

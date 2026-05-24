@@ -399,7 +399,9 @@ const Compliance = () => {
         {selectedEmployee && (
           <form onSubmit={(e) => { e.preventDefault(); handleReminderSubmit(); }} style={{ padding: '4px 0' }}>
             <div style={{ marginBottom: '16px' }}>
-              <label className="form-label" style={{ fontSize: '0.75rem', marginBottom: '6px', display: 'block' }}>{t('compliance.reminderModal.recipient')}</label>
+              <label className="form-label" style={{ fontSize: '0.75rem', marginBottom: '6px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                <i className="fas fa-user-circle" style={{ color: 'var(--primary)' }}></i> {t('compliance.reminderModal.recipient')}
+              </label>
               <div style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '10px', background: 'var(--sidebar-bg)', borderRadius: 'var(--radius-md)', border: '1px solid var(--border-color)' }}>
                 <div style={{ width: '32px', height: '32px', borderRadius: '50%', background: selectedEmployee.avatarBg, color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.8rem', fontWeight: 700 }}>
                   {selectedEmployee.initials}
@@ -412,12 +414,16 @@ const Compliance = () => {
             </div>
             
             <div className="form-group" style={{ marginBottom: '16px' }}>
-              <label className="form-label" style={{ fontSize: '0.75rem' }}>{t('compliance.reminderModal.missingRequirement')}</label>
+              <label className="form-label" style={{ fontSize: '0.75rem', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                <i className="fas fa-exclamation-circle" style={{ color: '#E11D48' }}></i> {t('compliance.reminderModal.missingRequirement')}
+              </label>
               <input type="text" className="form-input" value={selectedEmployee.requirement} disabled style={{ backgroundColor: 'var(--sidebar-bg)', color: 'var(--text-dark)' }} />
             </div>
 
             <div className="form-group" style={{ marginBottom: 0 }}>
-              <label className="form-label" style={{ fontSize: '0.75rem' }}>{t('compliance.reminderModal.messageLabel')}</label>
+              <label className="form-label" style={{ fontSize: '0.75rem', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                <i className="fas fa-comment-alt" style={{ color: 'var(--text-gray)' }}></i> {t('compliance.reminderModal.messageLabel')}
+              </label>
               <textarea 
                 className="form-input" 
                 rows="4" 
@@ -457,17 +463,23 @@ const Compliance = () => {
             </div>
 
             <div className="form-group" style={{ marginBottom: '16px' }}>
-              <label className="form-label" style={{ fontSize: '0.75rem' }}>{t('compliance.editModal.requirement')}</label>
+              <label className="form-label" style={{ fontSize: '0.75rem', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                <i className="fas fa-file-contract" style={{ color: 'var(--c-purple)' }}></i> {t('compliance.editModal.requirement')}
+              </label>
               <input type="text" className="form-input" value={selectedEmployee.requirement} disabled style={{ backgroundColor: 'var(--sidebar-bg)', color: 'var(--text-dark)' }} />
             </div>
 
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '16px' }}>
               <div className="form-group" style={{ marginBottom: 0 }}>
-                <label className="form-label" style={{ fontSize: '0.75rem' }}>{t('compliance.editModal.completionDate')}</label>
+                <label className="form-label" style={{ fontSize: '0.75rem', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  <i className="far fa-calendar-alt" style={{ color: 'var(--success)' }}></i> {t('compliance.editModal.completionDate')}
+                </label>
                 <input type="date" className="form-input" value={completionDate} onChange={(e) => setCompletionDate(e.target.value)} />
               </div>
               <div className="form-group" style={{ marginBottom: 0 }}>
-                <label className="form-label" style={{ fontSize: '0.75rem' }}>{t('compliance.editModal.status')}</label>
+                <label className="form-label" style={{ fontSize: '0.75rem', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  <i className="fas fa-info-circle" style={{ color: 'var(--primary)' }}></i> {t('compliance.editModal.status')}
+                </label>
                 <select className="form-input" value={complianceStatus} onChange={(e) => setComplianceStatus(e.target.value)}>
                   <option value="nonCompliant">{t('compliance.editModal.statusOptions.nonCompliant')}</option>
                   <option value="compliant">{t('compliance.editModal.statusOptions.compliant')}</option>
@@ -477,7 +489,9 @@ const Compliance = () => {
             </div>
 
             <div className="form-group" style={{ marginBottom: 0 }}>
-              <label className="form-label" style={{ fontSize: '0.75rem' }}>{t('compliance.editModal.certificate')}</label>
+              <label className="form-label" style={{ fontSize: '0.75rem', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                <i className="fas fa-certificate" style={{ color: 'var(--c-orange)' }}></i> {t('compliance.editModal.certificate')}
+              </label>
               <div 
                 style={{ 
                   border: '2px dashed var(--border-color)', 

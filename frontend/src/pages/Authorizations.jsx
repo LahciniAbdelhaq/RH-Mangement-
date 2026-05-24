@@ -264,11 +264,15 @@ export default function Authorizations() {
         <form onSubmit={e => { e.preventDefault(); handleCreate(); }}>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginBottom: '12px' }}>
             <div className="form-group" style={{ marginBottom: 0 }}>
-              <label className="form-label">{t('authorizations.modal.desiredDate')} *</label>
+              <label className="form-label" style={{ fontSize: '0.7rem', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                <i className="far fa-calendar-alt" style={{ color: 'var(--success)' }}></i> {t('authorizations.modal.desiredDate')} *
+              </label>
               <input type="date" name="date" className="form-input" value={form.date} onChange={handleFormChange} required />
             </div>
             <div className="form-group" style={{ marginBottom: 0 }}>
-              <label className="form-label">{t('authorizations.modal.durationHours')} *</label>
+              <label className="form-label" style={{ fontSize: '0.7rem', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                <i className="fas fa-clock" style={{ color: '#E11D48' }}></i> {t('authorizations.modal.durationHours')} *
+              </label>
               <select name="hours" className="form-input" value={form.hours} onChange={handleFormChange}>
                 <option value={1}>1 heure</option>
                 <option value={2}>2 heures</option>
@@ -277,7 +281,9 @@ export default function Authorizations() {
             </div>
           </div>
           <div className="form-group" style={{ marginBottom: '12px' }}>
-            <label className="form-label">{t('authorizations.modal.reasonLabel')} *</label>
+            <label className="form-label" style={{ fontSize: '0.7rem', display: 'flex', alignItems: 'center', gap: '4px' }}>
+              <i className="fas fa-align-left" style={{ color: 'var(--text-gray)' }}></i> {t('authorizations.modal.reasonLabel')} *
+            </label>
             <textarea name="reason" className="form-input" rows="3" placeholder={t('authorizations.modal.reasonPlaceholder')} value={form.reason} onChange={handleFormChange} required></textarea>
           </div>
           <div style={{ background: 'var(--primary-bg)', borderRadius: '10px', padding: '12px 16px', fontSize: '0.85rem', color: 'var(--primary)', fontWeight: 600 }}>

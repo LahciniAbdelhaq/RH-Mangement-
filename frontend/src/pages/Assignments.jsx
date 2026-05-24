@@ -186,13 +186,17 @@ export default function Assignments() {
         isSubmitDisabled={!editForm.dept || !editForm.poste}>
         <form onSubmit={e => { e.preventDefault(); handleSaveEdit(); }}>
           <div className="form-group" style={{ marginBottom: '12px' }}>
-            <label className="form-label">{t('assignments.modal.department')}</label>
+            <label className="form-label" style={{ fontSize: '0.7rem', display: 'flex', alignItems: 'center', gap: '4px' }}>
+              <i className="fas fa-building" style={{ color: 'var(--c-purple)' }}></i> {t('assignments.modal.department')}
+            </label>
             <select name="dept" className="form-input" value={editForm.dept} onChange={handleEditChange}>
               {DEPARTMENTS.map(d => <option key={d}>{d}</option>)}
             </select>
           </div>
           <div className="form-group" style={{ marginBottom: '12px' }}>
-            <label className="form-label">{t('assignments.modal.position')}</label>
+            <label className="form-label" style={{ fontSize: '0.7rem', display: 'flex', alignItems: 'center', gap: '4px' }}>
+              <i className="fas fa-briefcase" style={{ color: 'var(--c-blue)' }}></i> {t('assignments.modal.position')}
+            </label>
             <input type="text" name="poste" className="form-input" value={editForm.poste} onChange={handleEditChange} placeholder={t('assignments.modal.positionPlaceholder')} />
           </div>
           <div style={{ background: '#FFFBEB', borderRadius: '10px', padding: '12px 16px', fontSize: '0.85rem', color: '#92400E', fontWeight: 500 }}>

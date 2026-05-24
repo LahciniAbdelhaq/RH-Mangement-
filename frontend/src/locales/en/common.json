@@ -662,6 +662,8 @@
     "toast": {
       "saveSuccess": "Changes saved successfully!",
       "passwordSuccess": "Password updated successfully!",
+      "missingFields": "Please fill in all password fields",
+      "passwordMismatch": "Passwords do not match",
       "slackConnected": "Slack connected successfully!",
       "slackDisconnected": "Slack disconnected!",
       "googleConnected": "Google Workspace connected successfully!",
