@@ -1,0 +1,42 @@
+# =========================
+# REACT FRONTEND
+# =========================
+frontend/node_modules/
+frontend/build/
+frontend/dist/
+frontend/.env
+frontend/.cache/
+
+# =========================
+# SYMFONY BACKEND
+# =========================
+backend/vendor/
+backend/var/
+backend/.env.local
+backend/public/uploads/
+backend/.phpunit.result.cache
+
+# =========================
+# IDE
+# =========================
+.idea/
+.vscode/
+
+# =========================
+# OS FILES
+# =========================
+.DS_Store
+Thumbs.db
+
+# =========================
+# LOGS
+# =========================
+*.log
+
+# =========================
+# CACHE
+# =========================
+.cache/
+
+
+.claude
