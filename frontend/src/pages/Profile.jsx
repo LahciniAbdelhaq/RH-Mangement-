@@ -24,34 +24,24 @@ const Profile = () => {
     return dateStr;
   };
 
+  // Merge localStorage overrides with real user data
   const savedProfile = localStorage.getItem('hr_profile_data');
-  let employeeDetails = {
-    phone: '+212 6 12 34 56 7777777777777',
-    department: 'Ressources Humaines',
-    hireDate: '12 Janvier 2024',
-    contractType: 'CDI (Temps Plein)',
-    location: 'Rabat, Maroc',
+  let savedOverrides = {};
+  try { savedOverrides = savedProfile ? JSON.parse(savedProfile) : {}; } catch {}
+
+  const employeeDetails = {
+    phone:            savedOverrides.phone        || user?.telephone || '',
+    department:       savedOverrides.department   || user?.dept      || '',
+    hireDate:         savedOverrides.hireDate
+                        ? formatHireDate(savedOverrides.hireDate)
+                        : (user?.dateRecrutement ? formatHireDate(user.dateRecrutement.substring(0, 10)) : ''),
+    contractType:     savedOverrides.contractType || 'CDI (Temps Plein)',
+    location:         savedOverrides.location     || '',
     annualLeavesUsed: 4,
     annualLeavesTotal: 22,
-    sickLeavesUsed: 2,
-    sickLeavesTotal: 8,
+    sickLeavesUsed:   2,
+    sickLeavesTotal:  8,
   };
-
-  if (savedProfile) {
-    try {
-      const parsed = JSON.parse(savedProfile);
-      employeeDetails = {
-        ...employeeDetails,
-        phone: parsed.phone || employeeDetails.phone,
-        department: parsed.department || employeeDetails.department,
-        hireDate: parsed.hireDate ? formatHireDate(parsed.hireDate) : employeeDetails.hireDate,
-        contractType: parsed.contractType || employeeDetails.contractType,
-        location: parsed.location || employeeDetails.location,
-      };
-    } catch (e) {
-      console.error(e);
-    }
-  }
 
   const remainingAnnual = employeeDetails.annualLeavesTotal - employeeDetails.annualLeavesUsed;
   const remainingSick = employeeDetails.sickLeavesTotal - employeeDetails.sickLeavesUsed;
@@ -142,7 +132,7 @@ const Profile = () => {
               </div>
               <div>
                 <div style={{ fontSize: '0.75rem', color: 'var(--text-gray)' }}>{t('profile.postTitle')}</div>
-                <div style={{ fontSize: '0.9rem', fontWeight: 600, color: 'var(--text-dark)' }}>Directrice des Ressources Humaines</div>
+                <div style={{ fontSize: '0.9rem', fontWeight: 600, color: 'var(--text-dark)' }}>{user?.title || user?.role}</div>
               </div>
             </div>
 

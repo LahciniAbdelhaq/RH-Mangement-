@@ -93,6 +93,12 @@ const Sidebar = ({ collapsed, setCollapsed }) => {
           <span className="nav-text">Formations</span>
         </NavLink>
 
+        {/* ── CORRECTION DOSSIER ── */}
+        <NavLink to="/corrections" className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}>
+          <i className="fas fa-file-medical-alt"></i>
+          <span className="nav-text">Correction Dossier</span>
+        </NavLink>
+
         {/* ── ABSENCES & RETARDS (HR/Managers only) ── */}
         {canSeeAbsences && (
           <NavLink to="/absences" className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}>

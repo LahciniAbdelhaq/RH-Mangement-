@@ -1,42 +1,46 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { useTranslation } from 'react-i18next';
 import Modal from '../components/Modal';
 import { useToast } from '../context/ToastContext';
 import { jsPDF } from 'jspdf';
 import { GraduationCap, Scale } from 'lucide-react';
+import { employeApi } from '../services/api';
+
+const REQUIREMENTS = ['Formation Anti-Harcèlement', 'Cybersécurité', 'RGPD & Conformité', 'Sécurité incendie', 'Code de conduite'];
+const AVATAR_COLORS = ['F59E0B', '2563EB', '10B981', '9333EA', 'EF4444', '0891B2'];
 
 const Compliance = () => {
   const { showToast } = useToast();
   const { t } = useTranslation();
-  const [employees, setEmployees] = useState([
-    {
-      id: 1,
-      name: 'Michael Brown',
-      email: 'michael.b@company.com',
-      initials: 'MB',
-      avatarBg: '#F59E0B',
-      requirement: 'Formation Anti-Harcèlement', // We could translate this dynamically if it matched a key, for now we will assume it's data
-      status: 'En retard (2 j)',
-      isLate: true,
-      deadlineColor: '#E11D48',
-      badgeBg: '#FFE4E6',
-      badgeColor: '#E11D48'
-    },
-    {
-      id: 2,
-      name: 'Linda White',
-      email: 'linda.w@company.com',
-      initials: 'LW',
-      avatarBg: '#2563EB',
-      requirement: 'Cybersécurité',
-      status: '15 Nov, 2026',
-      isLate: false,
-      deadlineColor: '#64748B',
-      badgeBg: '#FEF3C7',
-      badgeColor: '#D97706'
-    }
-  ]);
+  const [employees, setEmployees] = useState([]);
+  const [loadingList, setLoadingList] = useState(true);
+
+  useEffect(() => {
+    employeApi.list()
+      .then(r => {
+        const data = r.data?.data ?? r.data ?? [];
+        setEmployees(data.map((e, i) => {
+          const name = `${e.prenom ?? ''} ${e.nom ?? ''}`.trim();
+          const initials = name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
+          return {
+            id: e.id,
+            name,
+            email: e.user?.email ?? '',
+            initials,
+            avatarBg: `#${AVATAR_COLORS[i % AVATAR_COLORS.length]}`,
+            requirement: REQUIREMENTS[i % REQUIREMENTS.length],
+            status: 'En attente',
+            isLate: false,
+            deadlineColor: '#64748B',
+            badgeBg: '#FEF3C7',
+            badgeColor: '#D97706',
+          };
+        }));
+      })
+      .catch(() => {})
+      .finally(() => setLoadingList(false));
+  }, []);
 
   const [selectedEmployee, setSelectedEmployee] = useState(null);
   const [isReminderModalOpen, setIsReminderModalOpen] = useState(false);
@@ -345,7 +349,9 @@ const Compliance = () => {
               </tr>
             </thead>
             <tbody>
-              {employees.length === 0 ? (
+              {loadingList ? (
+                <tr><td colSpan="4" style={{ textAlign: 'center', padding: '40px', color: 'var(--text-gray)' }}><i className="fas fa-spinner fa-spin" style={{ marginRight: 8 }}></i> Chargement...</td></tr>
+              ) : employees.length === 0 ? (
                 <tr>
                   <td colSpan="4" style={{ textAlign: 'center', padding: '24px', color: 'var(--text-gray)' }}>
                     <i className="fas fa-check-circle" style={{ color: 'var(--success)', fontSize: '1.5rem', marginBottom: '8px', display: 'block' }}></i>

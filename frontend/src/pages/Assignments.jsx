@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { useAuth } from '../context/AuthContext';
 import { useToast } from '../context/ToastContext';
@@ -6,17 +6,18 @@ import { useTranslation } from 'react-i18next';
 import Modal from '../components/Modal';
 import Pagination from '../components/Pagination';
 import { logSystemActivity } from '../utils/rbac';
+import { employeApi, serviceApi, affectationApi } from '../services/api';
 
-const DEPARTMENTS = ['Ingénierie', 'Marketing', 'Finance', 'Ressources Humaines', 'Commercial', 'Direction'];
-
-const MOCK_EMPLOYEES = [
-  { id: 1, name: 'Ali Benali', email: 'ali.benali@rh.ma', poste: 'Développeur Senior', dept: 'Ingénierie', assignedSince: '2024-01-15', status: 'Actif' },
-  { id: 2, name: 'Sara Hamidi', email: 'sara.hamidi@rh.ma', poste: 'Chef de Projet Marketing', dept: 'Marketing', assignedSince: '2023-06-01', status: 'Actif' },
-  { id: 3, name: 'Karim Ouali', email: 'karim.ouali@rh.ma', poste: 'Analyste Financier', dept: 'Finance', assignedSince: '2024-03-20', status: 'Actif' },
-  { id: 4, name: 'Nadia Benmoussa', email: 'nadia.benmoussa@rh.ma', poste: 'Ingénieure QA', dept: 'Ingénierie', assignedSince: '2025-01-10', status: 'Actif' },
-  { id: 5, name: 'Youssef Tazi', email: 'youssef.tazi@rh.ma', poste: 'Chargé RH', dept: 'Ressources Humaines', assignedSince: '2023-09-01', status: 'Actif' },
-  { id: 6, name: 'Imane Chraibi', email: 'imane.chraibi@rh.ma', poste: 'Commercial Senior', dept: 'Commercial', assignedSince: '2024-07-01', status: 'Actif' },
-];
+const normaliseEmp = (e) => ({
+  id: e.id,
+  name: `${e.prenom ?? ''} ${e.nom ?? ''}`.trim(),
+  email: e.user?.email ?? '',
+  poste: e.poste ?? '',
+  dept: e.service?.nom ?? '',
+  service_id: e.service?.id ?? '',
+  assignedSince: e.dateRecrutement ? e.dateRecrutement.substring(0, 10) : '',
+  status: e.statut === 'ACTIF' ? 'Actif' : e.statut ?? 'Actif',
+});
 
 const DEPT_COLORS = {
   'Ingénierie':         '#2563EB',
@@ -31,7 +32,19 @@ export default function Assignments() {
   const { user } = useAuth();
   const { showToast } = useToast();
   const { t } = useTranslation();
-  const [employees, setEmployees] = useState(MOCK_EMPLOYEES);
+  const [employees, setEmployees] = useState([]);
+  const [loadingList, setLoadingList] = useState(true);
+  const [services, setServices] = useState([]);
+
+  useEffect(() => {
+    employeApi.list()
+      .then(r => setEmployees((r.data?.data ?? r.data ?? []).map(normaliseEmp)))
+      .catch(() => {})
+      .finally(() => setLoadingList(false));
+    serviceApi.list()
+      .then(r => setServices(r.data?.data ?? r.data ?? []))
+      .catch(() => {});
+  }, []);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [selectedEmp, setSelectedEmp] = useState(null);
@@ -40,21 +53,32 @@ export default function Assignments() {
   const [page, setPage] = useState(1);
   const PER_PAGE = 6;
 
-  const [editForm, setEditForm] = useState({ dept: '', poste: '' });
+  const [editForm, setEditForm] = useState({ service_id: '', poste: '' });
   const handleEditChange = e => setEditForm(p => ({ ...p, [e.target.name]: e.target.value }));
 
   const openEdit = (emp) => {
     setSelectedEmp(emp);
-    setEditForm({ dept: emp.dept, poste: emp.poste });
+    setEditForm({ service_id: String(emp.service_id ?? ''), poste: emp.poste });
     setIsEditModalOpen(true);
   };
 
-  const handleSaveEdit = () => {
-    setEmployees(prev => prev.map(e =>
-      e.id === selectedEmp.id ? { ...e, dept: editForm.dept, poste: editForm.poste, assignedSince: new Date().toISOString().split('T')[0] } : e
-    ));
-    logSystemActivity('Modification Affectation', user?.name, `${selectedEmp.name} → ${editForm.dept} (${editForm.poste})`);
-    showToast(t('assignments.toast.updated', { name: selectedEmp.name }), 'success');
+  const handleSaveEdit = async () => {
+    try {
+      await affectationApi.create({
+        employe_id: selectedEmp.id,
+        service_id: Number(editForm.service_id) || undefined,
+        poste: editForm.poste,
+        dateDebut: new Date().toISOString().split('T')[0],
+      });
+      const svc = services.find(s => String(s.id) === String(editForm.service_id));
+      setEmployees(prev => prev.map(e =>
+        e.id === selectedEmp.id ? { ...e, dept: svc?.nom ?? e.dept, service_id: editForm.service_id, poste: editForm.poste, assignedSince: new Date().toISOString().split('T')[0] } : e
+      ));
+      logSystemActivity('Modification Affectation', user?.name, `${selectedEmp.name} → ${svc?.nom ?? editForm.service_id} (${editForm.poste})`);
+      showToast(t('assignments.toast.updated', { name: selectedEmp.name }), 'success');
+    } catch (err) {
+      showToast(err.response?.data?.message ?? 'Erreur lors de la mise à jour', 'error');
+    }
     setIsEditModalOpen(false);
   };
 
@@ -64,6 +88,11 @@ export default function Assignments() {
     showToast(t('assignments.toast.deleted', { name: selectedEmp.name }), 'success');
     setIsDeleteModalOpen(false);
   };
+
+  const DEPARTMENTS = services.map(s => s.nom);
+  const DEPT_COLORS_MAP = {};
+  const palette = ['#2563EB','#7C3AED','#059669','#DC2626','#D97706','#0F172A','#0891B2','#9333EA'];
+  services.forEach((s, i) => { DEPT_COLORS_MAP[s.nom] = palette[i % palette.length]; });
 
   const deptCounts = DEPARTMENTS.reduce((acc, dept) => {
     acc[dept] = employees.filter(e => e.dept === dept).length;
@@ -130,10 +159,12 @@ export default function Assignments() {
               </tr>
             </thead>
             <tbody>
-              {paginated.length === 0 ? (
+              {loadingList ? (
+                <tr><td colSpan={7} style={{ textAlign: 'center', padding: '40px', color: 'var(--text-gray)' }}><i className="fas fa-spinner fa-spin" style={{ marginRight: 8 }}></i> Chargement...</td></tr>
+              ) : paginated.length === 0 ? (
                 <tr><td colSpan={7} style={{ textAlign: 'center', padding: '40px', color: 'var(--text-gray)' }}>{t('assignments.table.noData')}</td></tr>
               ) : paginated.map(emp => {
-                const deptColor = DEPT_COLORS[emp.dept] || 'var(--primary)';
+                const deptColor = DEPT_COLORS_MAP[emp.dept] || DEPT_COLORS[emp.dept] || 'var(--primary)';
                 return (
                   <tr key={emp.id}>
                     <td>
@@ -183,14 +214,15 @@ export default function Assignments() {
         title={t('assignments.modal.editTitle', { name: selectedEmp?.name })}
         icon="fas fa-edit" iconColor="#2563EB" iconBg="#EFF6FF"
         submitColor="#2563EB" onSubmit={handleSaveEdit} submitText={t('assignments.modal.saveBtn')}
-        isSubmitDisabled={!editForm.dept || !editForm.poste}>
+        isSubmitDisabled={!editForm.service_id || !editForm.poste}>
         <form onSubmit={e => { e.preventDefault(); handleSaveEdit(); }}>
           <div className="form-group" style={{ marginBottom: '12px' }}>
             <label className="form-label" style={{ fontSize: '0.7rem', display: 'flex', alignItems: 'center', gap: '4px' }}>
               <i className="fas fa-building" style={{ color: 'var(--c-purple)' }}></i> {t('assignments.modal.department')}
             </label>
-            <select name="dept" className="form-input" value={editForm.dept} onChange={handleEditChange}>
-              {DEPARTMENTS.map(d => <option key={d}>{d}</option>)}
+            <select name="service_id" className="form-input" value={editForm.service_id} onChange={handleEditChange}>
+              <option value="">Sélectionner...</option>
+              {services.map(s => <option key={s.id} value={s.id}>{s.nom}</option>)}
             </select>
           </div>
           <div className="form-group" style={{ marginBottom: '12px' }}>

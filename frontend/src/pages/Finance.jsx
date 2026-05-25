@@ -1,27 +1,40 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useTheme } from '../context/ThemeContext';
 import { DollarSign, Printer, Download, Calculator, User, Briefcase, FileText, CheckCircle } from 'lucide-react';
+import { employeApi } from '../services/api';
 
 export default function Finance() {
   const { t, i18n } = useTranslation();
   const { theme } = useTheme();
   const isDark = theme === 'dark';
 
-  const mockEmployees = [
-    { id: 1, name: 'Sarah Connor', role: 'Director of HR', baseSalary: 18000, department: 'Ressources Humaines', contractType: 'CDI' },
-    { id: 2, name: 'Ali Benali', role: 'Senior Web Developer', baseSalary: 14000, department: 'Ingénierie', contractType: 'CDI' },
-    { id: 3, name: 'Marc Leblanc', role: 'UX Designer', baseSalary: 9500, department: 'Design', contractType: 'CDI' },
-    { id: 4, name: 'Karim Bennani', role: 'Support Specialist', baseSalary: 6500, department: 'Support', contractType: 'CDD' },
-    { id: 5, name: 'Salma Alami', role: 'HR Assistant', baseSalary: 7500, department: 'Ressources Humaines', contractType: 'CDI' }
-  ];
+  const [employees, setEmployees] = useState([]);
+  const [loadingEmps, setLoadingEmps] = useState(true);
 
-  const [selectedEmpId, setSelectedEmpId] = useState(1);
+  useEffect(() => {
+    employeApi.list()
+      .then(r => {
+        const data = r.data?.data ?? r.data ?? [];
+        setEmployees(data.map(e => ({
+          id: e.id,
+          name: `${e.prenom ?? ''} ${e.nom ?? ''}`.trim(),
+          role: e.poste ?? '',
+          baseSalary: Number(e.salaire) || 0,
+          department: e.service?.nom ?? 'Général',
+          contractType: 'CDI',
+        })));
+      })
+      .catch(() => {})
+      .finally(() => setLoadingEmps(false));
+  }, []);
+
+  const [selectedEmpId, setSelectedEmpId] = useState('');
   const [bonus, setBonus] = useState(1500);
   const [allowance, setAllowance] = useState(800); // Prime de transport/logement
   const [isSigned, setIsSigned] = useState(false);
 
-  const currentEmp = mockEmployees.find(e => e.id === Number(selectedEmpId)) || mockEmployees[0];
+  const currentEmp = employees.find(e => e.id === Number(selectedEmpId)) || employees[0] || { id: 0, name: '', role: '', baseSalary: 0, department: '', contractType: 'CDI' };
 
   // Moroccan Tax Deductions Logic
   const baseSalary = currentEmp.baseSalary;
@@ -127,8 +140,12 @@ export default function Finance() {
                 fontFamily: 'inherit'
               }}
             >
-              {mockEmployees.map(emp => (
-                <option key={emp.id} value={emp.id}>{emp.name} ({emp.role})</option>
+              {loadingEmps ? (
+                <option value="">Chargement...</option>
+              ) : employees.length === 0 ? (
+                <option value="">Aucun employé</option>
+              ) : employees.map(emp => (
+                <option key={emp.id} value={emp.id}>{emp.name}{emp.role ? ` (${emp.role})` : ''}</option>
               ))}
             </select>
           </div>

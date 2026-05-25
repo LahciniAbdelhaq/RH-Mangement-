@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { useAuth } from '../context/AuthContext';
 import { useToast } from '../context/ToastContext';
@@ -7,14 +7,31 @@ import Modal from '../components/Modal';
 import Pagination from '../components/Pagination';
 import { jsPDF } from 'jspdf';
 import { triggerWorkflowNotification, logSystemActivity } from '../utils/rbac';
+import { attestationApi } from '../services/api';
 
-const MOCK_DOCS = [
-  { id: 'DOC-001', type: 'Attestation de Travail', employee: 'Ali Benali', dept: 'Ingénierie', requestedAt: '2026-05-10', status: 'available', signedBy: null },
-  { id: 'DOC-002', type: 'Attestation de Salaire', employee: 'Sara Hamidi', dept: 'Marketing', requestedAt: '2026-05-14', status: 'processing', signedBy: null },
-  { id: 'DOC-003', type: 'Bulletin de Paie (Avril)', employee: 'Ali Benali', dept: 'Ingénierie', requestedAt: '2026-05-01', status: 'available', signedBy: 'Fatima Zahra Alaoui' },
-  { id: 'DOC-004', type: 'Attestation de Travail', employee: 'Karim Ouali', dept: 'Finance', requestedAt: '2026-05-18', status: 'waitingSignature', signedBy: null },
-  { id: 'DOC-005', type: 'Bulletin de Paie (Mars)', employee: 'Sara Hamidi', dept: 'Marketing', requestedAt: '2026-04-30', status: 'available', signedBy: 'Fatima Zahra Alaoui' },
-];
+const TYPE_MAP = {
+  travail: 'Attestation de Travail',
+  salaire: 'Attestation de Salaire',
+  administratif: 'Bulletin de Paie',
+};
+const TYPE_API_MAP = {
+  'Attestation de Travail': 'travail',
+  'Attestation de Salaire': 'salaire',
+  'Bulletin de Paie': 'administratif',
+};
+
+const normaliseAttestation = (a) => ({
+  id: a.id,
+  type: TYPE_MAP[a.type] ?? a.type,
+  apiType: a.type,
+  employee: a.employe ? `${a.employe.prenom ?? ''} ${a.employe.nom ?? ''}`.trim() : '',
+  dept: a.employe?.service?.nom ?? '',
+  requestedAt: a.dateDemande ? a.dateDemande.substring(0, 10) : '',
+  status: a.statut === 'SIGNEE' ? 'available'
+        : a.statut === 'GENEREE' ? 'waitingSignature'
+        : a.statut === 'REFUSEE' ? 'refused' : 'processing',
+  signedBy: a.signatureRH ? 'Agent RH' : null,
+});
 
 const DOC_TYPES = [
   { value: 'Attestation de Travail', icon: 'fas fa-briefcase', color: '#2563EB', bg: '#EFF6FF', filterValue: 'work' },
@@ -32,8 +49,16 @@ export default function Attestations() {
   const { user, effectiveRole } = useAuth();
   const { showToast } = useToast();
   const { t } = useTranslation();
-  const [docs, setDocs] = useState(MOCK_DOCS);
+  const [docs, setDocs] = useState([]);
+  const [loadingDocs, setLoadingDocs] = useState(true);
   const [isRequestModalOpen, setIsRequestModalOpen] = useState(false);
+
+  useEffect(() => {
+    attestationApi.list()
+      .then(r => setDocs((r.data?.data ?? r.data ?? []).map(normaliseAttestation)))
+      .catch(() => {})
+      .finally(() => setLoadingDocs(false));
+  }, []);
   const [activeTab, setActiveTab] = useState('all');
   const [page, setPage] = useState(1);
   const PER_PAGE = 5;
@@ -45,21 +70,19 @@ export default function Attestations() {
   const [form, setForm] = useState({ type: 'Attestation de Travail', note: '' });
   const handleFormChange = e => setForm(p => ({ ...p, [e.target.name]: e.target.value }));
 
-  const handleRequest = () => {
-    const newDoc = {
-      id: `DOC-${Date.now()}`,
-      type: form.type,
-      employee: user?.name,
-      dept: user?.dept,
-      requestedAt: new Date().toISOString().split('T')[0],
-      status: 'processing',
-      signedBy: null,
-    };
-    setDocs(prev => [newDoc, ...prev]);
-    triggerWorkflowNotification('Agent RH', 'Nouvelle demande d\'attestation', `${user?.name} a demandé : ${form.type}.`, 'request');
-    showToast(t('attestations.toast.submitted'), 'success');
-    setIsRequestModalOpen(false);
-    setForm({ type: 'Attestation de Travail', note: '' });
+  const handleRequest = async () => {
+    try {
+      const apiType = TYPE_API_MAP[form.type] ?? 'travail';
+      const r = await attestationApi.create({ type: apiType });
+      const newDoc = normaliseAttestation(r.data?.data ?? r.data);
+      setDocs(prev => [newDoc, ...prev]);
+      triggerWorkflowNotification('Agent RH', 'Nouvelle demande d\'attestation', `${user?.name} a demandé : ${form.type}.`, 'request');
+      showToast(t('attestations.toast.submitted'), 'success');
+      setIsRequestModalOpen(false);
+      setForm({ type: 'Attestation de Travail', note: '' });
+    } catch (err) {
+      showToast(err.response?.data?.message ?? 'Erreur lors de la demande', 'error');
+    }
   };
 
   const generatePDF = (doc) => {
@@ -211,23 +234,12 @@ export default function Attestations() {
           )}
           {isHR && (
             <button className="action-btn primary" onClick={() => {
+              attestationApi.list()
+                .then(r => setDocs((r.data?.data ?? r.data ?? []).map(normaliseAttestation)))
+                .catch(() => {});
               showToast(t('attestations.toast.generateMonthly'), 'info');
-              setTimeout(() => {
-                const employees = ['Ali Benali', 'Sara Hamidi', 'Karim Ouali', 'Nadia Benmoussa'];
-                const newDocs = employees.map((emp, index) => ({
-                  id: `DOC-${Date.now() + index}`,
-                  type: 'Bulletin de Paie (Mai)',
-                  employee: emp,
-                  dept: ['Ingénierie', 'Marketing', 'Finance', 'RH'][index],
-                  requestedAt: new Date().toISOString().split('T')[0],
-                  status: 'available',
-                  signedBy: 'Fatima Zahra Alaoui'
-                }));
-                setDocs(prev => [...newDocs, ...prev]);
-                showToast(t('attestations.toast.generated'), 'success');
-              }, 1500);
             }}>
-              <i className="fas fa-file-invoice-dollar"></i> {t('attestations.generateMonthly')}
+              <i className="fas fa-sync-alt"></i> {t('attestations.generateMonthly')}
             </button>
           )}
         </div>
@@ -278,7 +290,9 @@ export default function Attestations() {
               </tr>
             </thead>
             <tbody>
-              {paginated.length === 0 ? (
+              {loadingDocs ? (
+                <tr><td colSpan={8} style={{ textAlign: 'center', padding: '40px', color: 'var(--text-gray)' }}><i className="fas fa-spinner fa-spin" style={{ marginRight: 8 }}></i> Chargement...</td></tr>
+              ) : paginated.length === 0 ? (
                 <tr><td colSpan={8} style={{ textAlign: 'center', padding: '40px', color: 'var(--text-gray)' }}>{t('attestations.table.noData')}</td></tr>
               ) : paginated.map(doc => {
                 const cfg = statusConfig[doc.status] || statusConfig['processing'];
@@ -307,8 +321,17 @@ export default function Attestations() {
                             <i className="fas fa-download"></i>
                           </button>
                         )}
-                        {isHR && doc.status !== 'available' && (
-                          <button onClick={() => { setDocs(prev => prev.map(d => d.id === doc.id ? { ...d, status: 'waitingSignature' } : d)); showToast(t('attestations.toast.processed'), 'success'); }}
+                        {isHR && doc.status === 'processing' && (
+                          <button onClick={async () => {
+                            try {
+                              const r = await attestationApi.generate(doc.id);
+                              const updated = normaliseAttestation(r.data?.data ?? r.data);
+                              setDocs(prev => prev.map(d => d.id === doc.id ? updated : d));
+                              showToast(t('attestations.toast.processed'), 'success');
+                            } catch (err) {
+                              showToast(err.response?.data?.message ?? 'Erreur', 'error');
+                            }
+                          }}
                             style={{ background: '#EFF6FF', color: '#2563EB', border: 'none', borderRadius: '8px', padding: '5px 10px', cursor: 'pointer', fontSize: '0.8rem', fontWeight: 600 }}>
                             <i className="fas fa-check"></i>
                           </button>

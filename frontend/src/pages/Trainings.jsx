@@ -1,20 +1,13 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { useAuth } from '../context/AuthContext';
 import { useToast } from '../context/ToastContext';
 import { useTranslation } from 'react-i18next';
 import Modal from '../components/Modal';
 import Pagination from '../components/Pagination';
-import { triggerWorkflowNotification, logSystemActivity } from '../utils/rbac';
+import { formationApi } from '../services/api';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { MOROCCAN_CITIES } from '../utils/cities';
-
-const MOCK_TRAININGS = [
-  { id: 'FRM-001', title: 'ReactJS Avancé', domain: 'Informatique', trainer: 'Jean Martin', startDate: '2026-06-10', endDate: '2026-06-12', location: 'Casablanca', maxParticipants: 15, participants: ['Ali Benali', 'Sara Hamidi', 'Karim Ouali'], status: 'planned' },
-  { id: 'FRM-002', title: 'Leadership & Management', domain: 'Management', trainer: 'Amina Berrada', startDate: '2026-05-20', endDate: '2026-05-21', location: 'Rabat', maxParticipants: 10, participants: ['Leila Mansour', 'Hassan Alami'], status: 'done' },
-  { id: 'FRM-003', title: 'Sécurité des Systèmes d\'Information', domain: 'Informatique', trainer: 'Omar Tahir', startDate: '2026-07-01', endDate: '2026-07-03', location: 'En ligne', maxParticipants: 20, participants: ['Ali Benali'], status: 'planned' },
-  { id: 'FRM-004', title: 'Excel pour la Finance', domain: 'Finance', trainer: 'Nadia Rhali', startDate: '2026-05-15', endDate: '2026-05-15', location: 'Casablanca', maxParticipants: 12, participants: ['Sara Hamidi', 'Karim Ouali', 'Ali Benali'], status: 'inProgress' },
-];
 
 const chartData = [
   { month: 'Jan', formations: 2 }, { month: 'Fév', formations: 1 },
@@ -35,7 +28,8 @@ export default function Trainings() {
   const { user, effectiveRole } = useAuth();
   const { showToast } = useToast();
   const { t } = useTranslation();
-  const [trainings, setTrainings] = useState(MOCK_TRAININGS);
+  const [trainings, setTrainings] = useState([]);
+  const [loadingList, setLoadingList] = useState(true);
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
   const [selectedTraining, setSelectedTraining] = useState(null);
@@ -48,32 +42,49 @@ export default function Trainings() {
   const canManage = isHR;
 
   const [form, setForm] = useState({
-    title: '', domain: 'Informatique', trainer: '', startDate: '', endDate: '',
-    location: '', maxParticipants: 15, description: ''
+    titre: '', description: '', lieu: '', capacite: 15, dateDebut: '', dateFin: ''
   });
   const handleFormChange = e => setForm(p => ({ ...p, [e.target.name]: e.target.value }));
+  const resetForm = () => setForm({ titre: '', description: '', lieu: '', capacite: 15, dateDebut: '', dateFin: '' });
 
-  const handleCreate = () => {
-    if (!form.title || !form.startDate || !form.endDate || !form.trainer) {
+  // Normalise API formation to UI shape
+  const normalise = (f) => ({
+    id: f.id,
+    title: f.titre,
+    description: f.description,
+    location: f.lieu,
+    maxParticipants: f.capacite,
+    startDate: f.dateDebut?.substring(0, 10),
+    endDate: f.dateFin?.substring(0, 10),
+    status: f.statut === 'PLANIFIEE' ? 'planned' : f.statut === 'EN_COURS' ? 'inProgress' : f.statut === 'TERMINEE' ? 'done' : 'cancelled',
+    participants: (f.participants ?? []).map(p => `${p.prenom} ${p.nom}`),
+    participantIds: (f.participants ?? []).map(p => p.id),
+  });
+
+  useEffect(() => {
+    formationApi.list()
+      .then(r => setTrainings((r.data?.data ?? r.data ?? []).map(normalise)))
+      .catch(() => showToast('Erreur chargement formations', 'error'))
+      .finally(() => setLoadingList(false));
+  }, []);
+
+  const handleCreate = async () => {
+    if (!form.titre || !form.dateDebut || !form.dateFin) {
       showToast(t('trainings.toast.missingFields'), 'warning');
       return;
     }
-    const newTraining = {
-      id: `FRM-${Date.now()}`,
-      ...form,
-      maxParticipants: Number(form.maxParticipants),
-      participants: [],
-      status: 'planned',
-    };
-    setTrainings(prev => [newTraining, ...prev]);
-    triggerWorkflowNotification('Tous', 'Nouvelle formation disponible', `Nouvelle formation : "${form.title}" programmée du ${form.startDate} au ${form.endDate}.`, 'info');
-    logSystemActivity('Création Formation', user?.name, `Formation "${form.title}" créée`);
-    showToast(t('trainings.toast.created'), 'success');
-    setIsCreateModalOpen(false);
-    setForm({ title: '', domain: 'Informatique', trainer: '', startDate: '', endDate: '', location: '', maxParticipants: 15, description: '' });
+    try {
+      const r = await formationApi.create({ ...form, capacite: Number(form.capacite), statut: 'PLANIFIEE' });
+      setTrainings(prev => [normalise(r.data?.data ?? r.data), ...prev]);
+      showToast(t('trainings.toast.created'), 'success');
+      setIsCreateModalOpen(false);
+      resetForm();
+    } catch {
+      showToast('Erreur lors de la création', 'error');
+    }
   };
 
-  const handleEnroll = (training) => {
+  const handleEnroll = async (training) => {
     if (training.participants.includes(user?.name)) {
       showToast(t('trainings.toast.alreadyEnrolled'), 'warning');
       return;
@@ -82,20 +93,30 @@ export default function Trainings() {
       showToast(t('trainings.toast.full'), 'error');
       return;
     }
-    setTrainings(prev => prev.map(t =>
-      t.id === training.id ? { ...t, participants: [...t.participants, user?.name] } : t
-    ));
-    showToast(t('trainings.toast.enrolled', { title: training.title }), 'success');
+    try {
+      await formationApi.participer(training.id);
+      setTrainings(prev => prev.map(f =>
+        f.id === training.id ? { ...f, participants: [...f.participants, user?.name] } : f
+      ));
+      showToast(t('trainings.toast.enrolled', { title: training.title }), 'success');
+    } catch (err) {
+      showToast(err.response?.data?.message ?? 'Erreur inscription', 'error');
+    }
   };
 
-  const handleDelete = (id) => {
-    setTrainings(prev => prev.filter(t => t.id !== id));
-    showToast(t('trainings.toast.deleted'), 'success');
-    setIsDetailModalOpen(false);
+  const handleDelete = async (id) => {
+    try {
+      await formationApi.delete(id);
+      setTrainings(prev => prev.filter(f => f.id !== id));
+      showToast(t('trainings.toast.deleted'), 'success');
+      setIsDetailModalOpen(false);
+    } catch {
+      showToast('Erreur lors de la suppression', 'error');
+    }
   };
 
   const filters = ['all', 'planned', 'inProgress', 'done'];
-  const myTrainings = trainings.filter(t => t.participants.includes(user?.name));
+  const myTrainings = trainings.filter(f => f.participantIds?.includes(user?.employe_id) || f.participants.includes(user?.name));
   const filtered = trainings.filter(t => activeFilter === 'all' || t.status === activeFilter);
   const totalPages = Math.ceil(filtered.length / PER_PAGE);
   const paginated = filtered.slice((page - 1) * PER_PAGE, page * PER_PAGE);
@@ -152,7 +173,12 @@ export default function Trainings() {
             ))}
           </div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-            {paginated.map(training => {
+            {loadingList && (
+              <div className="card" style={{ textAlign: 'center', padding: '40px', color: 'var(--text-gray)' }}>
+                <i className="fas fa-spinner fa-spin" style={{ marginRight: 8 }}></i> Chargement...
+              </div>
+            )}
+            {!loadingList && paginated.map(training => {
               const cfg = statusConfig[training.status] || statusConfig['planned'];
               const isEnrolled = training.participants.includes(user?.name);
               const isFull = training.participants.length >= training.maxParticipants;
@@ -194,7 +220,7 @@ export default function Trainings() {
                 </div>
               );
             })}
-            {paginated.length === 0 && (
+            {!loadingList && paginated.length === 0 && (
               <div className="card" style={{ textAlign: 'center', padding: '40px', color: 'var(--text-gray)' }}>
                 {t('common.noData')}
               </div>
@@ -240,34 +266,20 @@ export default function Trainings() {
       <Modal isOpen={isCreateModalOpen} onClose={() => setIsCreateModalOpen(false)}
         title={t('trainings.modal.createTitle')} icon="fas fa-graduation-cap" iconColor="var(--primary)" iconBg="var(--primary-bg)"
         submitColor="var(--primary)" onSubmit={handleCreate} submitText={t('trainings.modal.submit')}
-        isSubmitDisabled={!form.title || !form.startDate || !form.endDate || !form.trainer}>
+        isSubmitDisabled={!form.titre || !form.dateDebut || !form.dateFin}>
         <form onSubmit={e => { e.preventDefault(); handleCreate(); }} style={{ padding: '4px 0' }}>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', marginBottom: '10px' }}>
-            <div className="form-group" style={{ marginBottom: 0 }}>
+            <div className="form-group" style={{ marginBottom: 0, gridColumn: '1 / -1' }}>
               <label className="form-label" style={{ fontSize: '0.7rem', display: 'flex', alignItems: 'center', gap: '4px' }}>
                 <i className="fas fa-heading" style={{ color: 'var(--primary)' }}></i> {t('trainings.modal.titleLabel')} *
               </label>
-              <input type="text" name="title" className="form-input" placeholder={t('trainings.modal.titlePlaceholder')} value={form.title} onChange={handleFormChange} required />
-            </div>
-            <div className="form-group" style={{ marginBottom: 0 }}>
-              <label className="form-label" style={{ fontSize: '0.7rem', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                <i className="fas fa-layer-group" style={{ color: 'var(--c-purple)' }}></i> {t('trainings.modal.domain')}
-              </label>
-              <select name="domain" className="form-input" value={form.domain} onChange={handleFormChange}>
-                {DOMAINS.map(d => <option key={d}>{d}</option>)}
-              </select>
-            </div>
-            <div className="form-group" style={{ marginBottom: 0 }}>
-              <label className="form-label" style={{ fontSize: '0.7rem', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                <i className="fas fa-chalkboard-teacher" style={{ color: 'var(--c-orange)' }}></i> {t('trainings.modal.trainer')} *
-              </label>
-              <input type="text" name="trainer" className="form-input" placeholder={t('trainings.modal.trainerPlaceholder')} value={form.trainer} onChange={handleFormChange} required />
+              <input type="text" name="titre" className="form-input" placeholder={t('trainings.modal.titlePlaceholder')} value={form.titre} onChange={handleFormChange} required />
             </div>
             <div className="form-group" style={{ marginBottom: 0 }}>
               <label className="form-label" style={{ fontSize: '0.7rem', display: 'flex', alignItems: 'center', gap: '4px' }}>
                 <i className="fas fa-map-marker-alt" style={{ color: '#E11D48' }}></i> {t('trainings.modal.location')}
               </label>
-              <select name="location" className="form-input" value={form.location} onChange={handleFormChange}>
+              <select name="lieu" className="form-input" value={form.lieu} onChange={handleFormChange}>
                 <option value="">Sélectionner...</option>
                 {MOROCCAN_CITIES.map(city => (
                   <option key={city} value={city}>{city}</option>
@@ -276,23 +288,23 @@ export default function Trainings() {
             </div>
             <div className="form-group" style={{ marginBottom: 0 }}>
               <label className="form-label" style={{ fontSize: '0.7rem', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                <i className="fas fa-users" style={{ color: 'var(--primary)' }}></i> {t('trainings.modal.maxPart')}
+              </label>
+              <input type="number" name="capacite" className="form-input" min="1" max="100" value={form.capacite} onChange={handleFormChange} />
+            </div>
+            <div className="form-group" style={{ marginBottom: 0 }}>
+              <label className="form-label" style={{ fontSize: '0.7rem', display: 'flex', alignItems: 'center', gap: '4px' }}>
                 <i className="far fa-calendar-alt" style={{ color: 'var(--success)' }}></i> {t('trainings.modal.startDate')} *
               </label>
-              <input type="date" name="startDate" className="form-input" value={form.startDate} onChange={handleFormChange} required />
+              <input type="date" name="dateDebut" className="form-input" value={form.dateDebut} onChange={handleFormChange} required />
             </div>
             <div className="form-group" style={{ marginBottom: 0 }}>
               <label className="form-label" style={{ fontSize: '0.7rem', display: 'flex', alignItems: 'center', gap: '4px' }}>
                 <i className="far fa-calendar-check" style={{ color: 'var(--success)' }}></i> {t('trainings.modal.endDate')} *
               </label>
-              <input type="date" name="endDate" className="form-input" value={form.endDate} onChange={handleFormChange} required />
+              <input type="date" name="dateFin" className="form-input" value={form.dateFin} onChange={handleFormChange} required />
             </div>
-            <div className="form-group" style={{ marginBottom: 0 }}>
-              <label className="form-label" style={{ fontSize: '0.7rem', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                <i className="fas fa-users" style={{ color: 'var(--primary)' }}></i> {t('trainings.modal.maxPart')}
-              </label>
-              <input type="number" name="maxParticipants" className="form-input" min="1" max="100" value={form.maxParticipants} onChange={handleFormChange} />
-            </div>
-            <div className="form-group" style={{ marginBottom: 0 }}>
+            <div className="form-group" style={{ marginBottom: 0, gridColumn: '1 / -1' }}>
               <label className="form-label" style={{ fontSize: '0.7rem', display: 'flex', alignItems: 'center', gap: '4px' }}>
                 <i className="fas fa-align-left" style={{ color: 'var(--text-gray)' }}></i> {t('trainings.modal.description')}
               </label>

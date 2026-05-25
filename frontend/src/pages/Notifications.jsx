@@ -1,12 +1,13 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { 
-  Bell, Check, Trash2, 
+import {
+  Bell, Check, Trash2,
   Calendar, AlertTriangle, FileText, Info,
   CheckCircle2, X
 } from 'lucide-react';
 import { useToast } from '../context/ToastContext';
 import { useTranslation } from 'react-i18next';
+import { notificationApi } from '../services/api';
 
 const Notifications = () => {
   const { showToast } = useToast();
@@ -48,20 +49,31 @@ const Notifications = () => {
     }
     return time;
   };
-  const [notifications, setNotifications] = useState([
-    { id: 1, title: 'Nouvelle demande de congé', message: 'Ali Benali a soumis une demande de congé annuel pour la période du 20 au 25 mai.', time: 'Il y a 10 min', date: '16 Mai 2026', type: 'request', unread: true, category: 'conge' },
-    { id: 2, title: 'Document expiré', message: 'Le contrat de travail de Marc Leblanc arrive à échéance dans 15 jours. Veuillez prévoir le renouvellement.', time: 'Il y a 2h', date: '16 Mai 2026', type: 'alert', unread: true, category: 'document' },
-    { id: 3, title: 'Mise à jour du système', message: 'La plateforme RH Management a été mise à jour vers la version 2.4.0. Découvrez les nouveautés.', time: 'Hier', date: '15 Mai 2026', type: 'info', unread: false, category: 'system' },
-    { id: 4, title: 'Fiche de paie disponible', message: 'Votre fiche de paie pour le mois d\'Avril 2026 est maintenant disponible au téléchargement.', time: '2 jours', date: '14 Mai 2026', type: 'info', unread: false, category: 'paie' },
-    { id: 5, title: 'Alerte Absence', message: 'Leïla Mansour est absente aujourd\'hui sans justificatif préalable.', time: '3 jours', date: '13 Mai 2026', type: 'alert', unread: false, category: 'absence' },
-    { id: 6, title: 'Nouveau message RH', message: 'Un nouveau message a été posté dans le canal général.', time: '4 jours', date: '12 Mai 2026', type: 'info', unread: false, category: 'system' },
-  ]);
+  const [notifications, setNotifications] = useState([]);
 
-  const filteredNotifs = activeTab === 'all' 
-    ? notifications 
+  const normalise = (n) => ({
+    id: n.id,
+    title: n.titre,
+    message: n.message,
+    time: n.createdAt ? new Date(n.createdAt).toLocaleString('fr-FR') : '',
+    date: n.createdAt ? new Date(n.createdAt).toLocaleDateString('fr-FR') : '',
+    type: n.type === 'error' ? 'alert' : n.type === 'success' ? 'info' : 'info',
+    unread: !n.isRead,
+    category: 'general',
+  });
+
+  useEffect(() => {
+    notificationApi.list()
+      .then(r => setNotifications((r.data?.data ?? r.data ?? []).map(normalise)))
+      .catch(() => {});
+  }, []);
+
+  const filteredNotifs = activeTab === 'all'
+    ? notifications
     : (activeTab === 'unread' ? notifications.filter(n => n.unread) : notifications.filter(n => n.type === activeTab));
 
-  const markAllRead = () => {
+  const markAllRead = async () => {
+    await notificationApi.markAllRead().catch(() => {});
     setNotifications(notifications.map(n => ({ ...n, unread: false })));
     showToast('Toutes les notifications marquées comme lues', 'success');
   };
@@ -71,7 +83,11 @@ const Notifications = () => {
     showToast('Notification supprimée');
   };
 
-  const toggleRead = (id) => {
+  const toggleRead = async (id) => {
+    const notif = notifications.find(n => n.id === id);
+    if (notif?.unread) {
+      await notificationApi.markRead(id).catch(() => {});
+    }
     setNotifications(notifications.map(n => n.id === id ? { ...n, unread: !n.unread } : n));
   };
 

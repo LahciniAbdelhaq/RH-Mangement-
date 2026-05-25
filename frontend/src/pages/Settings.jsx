@@ -6,7 +6,7 @@ import { useTranslation } from 'react-i18next';
 import { useTheme } from '../context/ThemeContext';
 import { User, Mail, Phone, MapPin, Clock, Calendar, Briefcase, Shield, Globe, Users, Bell, AlertTriangle, Lock, Key, Eye, EyeOff, Loader2, Check, Link2 } from 'lucide-react';
 import { logSystemActivity } from '../utils/rbac';
-
+import { authApi } from '../services/api';
 import { MOROCCAN_CITIES } from '../utils/cities';
 import Pagination from '../components/Pagination';
 
@@ -97,7 +97,7 @@ const Settings = () => {
 
 
 
-  const handlePasswordUpdate = () => {
+  const handlePasswordUpdate = async () => {
     if (!passwordForm.current || !passwordForm.new || !passwordForm.confirm) {
       showToast(t('settings.toast.missingFields') || 'Veuillez remplir tous les champs de mot de passe', 'warning');
       return;
@@ -106,8 +106,14 @@ const Settings = () => {
       showToast(t('settings.toast.passwordMismatch') || 'Les mots de passe ne correspondent pas', 'error');
       return;
     }
-    showToast(t('settings.toast.passwordSuccess') || 'Mot de passe mis à jour !', 'success');
-    setPasswordForm({ current: '', new: '', confirm: '' });
+    try {
+      await authApi.changePassword(passwordForm.current, passwordForm.new);
+      showToast(t('settings.toast.passwordSuccess') || 'Mot de passe mis à jour !', 'success');
+      logSystemActivity('Changement de mot de passe', user?.name, 'Mot de passe modifié avec succès');
+      setPasswordForm({ current: '', new: '', confirm: '' });
+    } catch (err) {
+      showToast(err.response?.data?.message ?? 'Erreur lors du changement de mot de passe', 'error');
+    }
   };
 
   const [slackConnected, setSlackConnected] = useState(true);

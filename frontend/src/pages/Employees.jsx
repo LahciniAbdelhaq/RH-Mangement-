@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Modal from '../components/Modal';
 import Pagination from '../components/Pagination';
 import { motion } from 'framer-motion';
@@ -7,21 +7,60 @@ import { useTranslation } from 'react-i18next';
 import { useAuth } from '../context/AuthContext';
 import { logSystemActivity } from '../utils/rbac';
 import { User, Mail, Briefcase, Building2, Calendar, Phone, ShieldCheck, AlertTriangle } from 'lucide-react';
+import { employeApi, serviceApi } from '../services/api';
 
 const Employees = () => {
   const { showToast } = useToast();
   const { t } = useTranslation();
   const { user, effectiveRole } = useAuth();
+  const [employees, setEmployees] = useState([]);
+  const [loadingList, setLoadingList] = useState(true);
   const [currentPage, setCurrentPage] = useState(1);
+  const [searchQuery, setSearchQuery] = useState('');
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [isViewModalOpen, setIsViewModalOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [selectedEmployee, setSelectedEmployee] = useState(null);
 
-  // Form states f Add Employee
-  const [addForm, setAddForm] = useState({ firstName: '', lastName: '', email: '', role: '', dept: 'Ingénierie', contract: 'CDI' });
-  const [editForm, setEditForm] = useState({ name: '', email: '', role: '' });
+  const AVATAR_COLORS = ['2563EB','10B981','F59E0B','9333EA','EF4444','0891B2','7C3AED','059669'];
+  const normalise = (e) => {
+    const nom = e.nom ?? '';
+    const prenom = e.prenom ?? '';
+    const initials = `${prenom.charAt(0)}${nom.charAt(0)}`.toUpperCase();
+    const colorIdx = (e.id ?? 0) % AVATAR_COLORS.length;
+    return {
+      id: e.id,
+      name: `${prenom} ${nom}`.trim(),
+      nom,
+      prenom,
+      email: e.user?.email ?? '',
+      role: e.poste ?? '',
+      type: e.statut ?? 'ACTIF',
+      dept: e.service?.nom ?? '',
+      service_id: e.service?.id ?? '',
+      date: e.dateRecrutement ? e.dateRecrutement.substring(0, 10) : '',
+      status: e.statut === 'ACTIF' ? 'Actif' : e.statut === 'CONGE' ? 'En Congé' : e.statut ?? 'Actif',
+      initials,
+      bg: `#${AVATAR_COLORS[colorIdx]}`,
+      matricule: e.matricule,
+      grade: e.grade,
+    };
+  };
+
+  const [services, setServices] = useState([]);
+  useEffect(() => {
+    employeApi.list()
+      .then(r => setEmployees((r.data?.data ?? r.data ?? []).map(normalise)))
+      .catch(() => showToast('Erreur chargement employés', 'error'))
+      .finally(() => setLoadingList(false));
+    serviceApi.list()
+      .then(r => setServices(r.data?.data ?? r.data ?? []))
+      .catch(() => {});
+  }, []);
+
+  const [addForm, setAddForm] = useState({ prenom: '', nom: '', email: '', poste: '', service_id: '', statut: 'ACTIF', password: '' });
+  const [editForm, setEditForm] = useState({ nom: '', prenom: '', poste: '', service_id: '' });
 
   // Evaluate RBAC permissions locally f the page
   const isHRManager = effectiveRole === 'HR_MANAGER';
@@ -36,56 +75,60 @@ const Employees = () => {
     setSelectedEmployee(employee);
     if (type === 'view') setIsViewModalOpen(true);
     if (type === 'edit') {
-      setEditForm({ name: employee.name, email: employee.email, role: employee.role });
+      setEditForm({ nom: employee.nom, prenom: employee.prenom, poste: employee.role, service_id: employee.service_id ?? '' });
       setIsEditModalOpen(true);
     }
     if (type === 'delete') setIsDeleteModalOpen(true);
   };
 
-  const onAddSubmit = (e) => {
+  const onAddSubmit = async (e) => {
     e.preventDefault();
-    const fullName = `${addForm.firstName} ${addForm.lastName}`;
-    showToast(`Employé ${fullName} ajouté avec succès !`, 'success');
-    logSystemActivity(
-      "Création d'employé",
-      user?.name,
-      `Création du profil de l'employé: ${fullName} (${addForm.role}) dans le service ${addForm.dept}`
-    );
-    setIsAddModalOpen(false);
-    // Reset form
-    setAddForm({ firstName: '', lastName: '', email: '', role: '', dept: 'Ingénierie', contract: 'CDI' });
+    try {
+      const payload = { nom: addForm.nom, prenom: addForm.prenom, email: addForm.email, poste: addForm.poste, statut: addForm.statut, password: addForm.password };
+      if (addForm.service_id) payload.service_id = Number(addForm.service_id);
+      const r = await employeApi.create(payload);
+      const newEmp = normalise(r.data?.data ?? r.data);
+      setEmployees(prev => [newEmp, ...prev]);
+      showToast(`Employé ${addForm.prenom} ${addForm.nom} ajouté avec succès !`, 'success');
+      logSystemActivity("Création d'employé", user?.name, `Création du profil: ${addForm.prenom} ${addForm.nom} (${addForm.poste})`);
+      setIsAddModalOpen(false);
+      setAddForm({ prenom: '', nom: '', email: '', poste: '', service_id: '', statut: 'ACTIF', password: '' });
+    } catch (err) {
+      showToast(err.response?.data?.message ?? 'Erreur lors de la création', 'error');
+    }
   };
 
-  const onEditSubmit = (e) => {
+  const onEditSubmit = async (e) => {
     e.preventDefault();
-    showToast('Profil mis à jour !', 'success');
-    logSystemActivity(
-      "Modification d'employé",
-      user?.name,
-      `Modification du profil de ${selectedEmployee.name} -> Nouveau rôle: ${editForm.role}`
-    );
-    setIsEditModalOpen(false);
+    try {
+      const payload = { nom: editForm.nom, prenom: editForm.prenom, poste: editForm.poste };
+      if (editForm.service_id) payload.service_id = Number(editForm.service_id);
+      const r = await employeApi.update(selectedEmployee.id, payload);
+      const updated = normalise(r.data?.data ?? r.data);
+      setEmployees(prev => prev.map(emp => emp.id === selectedEmployee.id ? updated : emp));
+      showToast('Profil mis à jour !', 'success');
+      logSystemActivity("Modification d'employé", user?.name, `Modification de ${selectedEmployee.name} -> ${editForm.poste}`);
+      setIsEditModalOpen(false);
+    } catch (err) {
+      showToast(err.response?.data?.message ?? 'Erreur lors de la mise à jour', 'error');
+    }
   };
 
-  const onDeleteSubmit = () => {
-    showToast('L\'employé a été retiré du système.', 'error');
-    logSystemActivity(
-      "Suppression d'employé",
-      user?.name,
-      `Suppression définitive du compte de l'employé ${selectedEmployee.name}`
-    );
+  const onDeleteSubmit = async () => {
+    try {
+      await employeApi.delete(selectedEmployee.id);
+      setEmployees(prev => prev.filter(e => e.id !== selectedEmployee.id));
+      showToast('L\'employé a été retiré du système.', 'success');
+      logSystemActivity("Suppression d'employé", user?.name, `Suppression de ${selectedEmployee.name}`);
+    } catch {
+      showToast('Erreur lors de la suppression', 'error');
+    }
     setIsDeleteModalOpen(false);
   };
 
-  const employeesData = [
-    { id: 1, name: "Emma Wilson", email: "emma.w@company.com", role: "Chef de Produit Senior", type: "Temps plein", dept: "Produit", date: "15 Jan, 2024", status: "Actif", initials: "EW", bg: "#2563EB" },
-    { id: 2, name: "David Chen", email: "david.c@entreprise.com", role: "Développeur Frontend", type: "Temps plein", dept: "Ingénierie", date: "01 Mar, 2025", status: "Actif", initials: "DC", bg: "#10B981" },
-    { id: 3, name: "Sarah Miller", email: "sarah.m@entreprise.com", role: "Analyste Financière", type: "Temps partiel", dept: "Finance", date: "10 Nov, 2023", status: "En Congé", initials: "SM", bg: "#F59E0B" },
-    { id: 4, name: "Marcus Rowe", email: "marcus.r@entreprise.com", role: "Généraliste RH", type: "Temps plein", dept: "Ressources Humaines", date: "20 Oct, 2026", status: "Intégration", initials: "MR", bg: "#9333EA" },
-  ];
-
-  // Apply strict Department Filter for Department Managers and Interim Managers
-  const filteredEmployees = employeesData.filter(emp => {
+  const filteredEmployees = employees.filter(emp => {
+    if (searchQuery && !emp.name.toLowerCase().includes(searchQuery.toLowerCase()) &&
+        !emp.email.toLowerCase().includes(searchQuery.toLowerCase())) return false;
     if (isDeptManager) {
       // Must match exactly or match standard abbreviations
       const userDept = user?.dept?.toLowerCase() || '';
@@ -118,28 +161,28 @@ const Employees = () => {
           <div className="stat-header">
             <div className="stat-icon primary"><i className="fas fa-users"></i></div>
           </div>
-          <div className="stat-value">{isDeptManager ? filteredEmployees.length : 452}</div>
+          <div className="stat-value">{employees.filter(e => e.status === 'Actif').length}</div>
           <div className="stat-label">{t('employees.stats.active')}</div>
         </div>
         <div className="stat-card purple-card">
           <div className="stat-header">
             <div className="stat-icon success" style={{ background: '#E0E7FF', color: '#4F46E5' }}><i className="fas fa-user-plus"></i></div>
           </div>
-          <div className="stat-value">{isDeptManager ? 0 : 24}</div>
+          <div className="stat-value">{employees.filter(e => e.type === 'INTEGRATION').length}</div>
           <div className="stat-label">{t('employees.stats.onboarding')}</div>
         </div>
         <div className="stat-card amber-card">
           <div className="stat-header">
             <div className="stat-icon warning"><i className="fas fa-umbrella-beach"></i></div>
           </div>
-          <div className="stat-value">{isDeptManager ? filteredEmployees.filter(e => e.status === 'En Congé').length : 12}</div>
+          <div className="stat-value">{employees.filter(e => e.status === 'En Congé').length}</div>
           <div className="stat-label">{t('employees.stats.onLeave')}</div>
         </div>
         <div className="stat-card emerald-card">
           <div className="stat-header">
             <div className="stat-icon" style={{ background: '#F3E8FF', color: '#9333EA' }}><i className="fas fa-building"></i></div>
           </div>
-          <div className="stat-value">{isDeptManager ? 1 : 8}</div>
+          <div className="stat-value">{new Set(employees.map(e => e.dept).filter(Boolean)).size}</div>
           <div className="stat-label">{t('employees.stats.departments')}</div>
         </div>
       </div>
@@ -151,7 +194,7 @@ const Employees = () => {
           <div className="filter-group">
             <div className="search-bar">
               <i className="fas fa-search"></i>
-              <input type="text" placeholder={t('employees.filters.searchPlaceholder')} />
+              <input type="text" placeholder={t('employees.filters.searchPlaceholder')} value={searchQuery} onChange={e => { setSearchQuery(e.target.value); setCurrentPage(1); }} />
             </div>
             <button className="filter-pill filter-pill-blue">{t('employees.filters.deptFilter')}</button>
             <button className="filter-pill filter-pill-green">{t('employees.filters.statusFilter')}</button>
@@ -171,7 +214,12 @@ const Employees = () => {
               </tr>
             </thead>
             <tbody>
-              {filteredEmployees.map((emp, i) => (
+              {loadingList && (
+                <tr><td colSpan="6" style={{ textAlign: 'center', padding: '32px', color: 'var(--text-gray)' }}>
+                  <i className="fas fa-spinner fa-spin" style={{ marginRight: 8 }}></i> Chargement...
+                </td></tr>
+              )}
+              {!loadingList && filteredEmployees.map((emp, i) => (
                 <tr key={i}>
                   <td>
                     <div className="user-cell">
@@ -204,7 +252,7 @@ const Employees = () => {
                   </td>
                 </tr>
               ))}
-              {filteredEmployees.length === 0 && (
+              {!loadingList && filteredEmployees.length === 0 && (
                 <tr>
                   <td colSpan="6" style={{ textAlign: 'center', padding: '32px', color: 'var(--text-gray)' }}>
                     Aucun employé trouvé dans votre département.
@@ -239,50 +287,44 @@ const Employees = () => {
               <label className="form-label" style={{ fontSize: '0.7rem', display: 'flex', alignItems: 'center', gap: '4px' }}>
                 <User size={12} color="var(--primary)" /> {t('employees.form.firstName')}
               </label>
-              <input type="text" required value={addForm.firstName} onChange={(e) => setAddForm({ ...addForm, firstName: e.target.value })} className="form-input" placeholder="Jean" />
+              <input type="text" required value={addForm.prenom} onChange={(e) => setAddForm({ ...addForm, prenom: e.target.value })} className="form-input" placeholder="Ahmed" />
             </div>
             <div className="form-group" style={{ marginBottom: 0 }}>
               <label className="form-label" style={{ fontSize: '0.7rem', display: 'flex', alignItems: 'center', gap: '4px' }}>
                 <User size={12} color="var(--primary)" /> {t('employees.form.lastName')}
               </label>
-              <input type="text" required value={addForm.lastName} onChange={(e) => setAddForm({ ...addForm, lastName: e.target.value })} className="form-input" placeholder="Dupont" />
+              <input type="text" required value={addForm.nom} onChange={(e) => setAddForm({ ...addForm, nom: e.target.value })} className="form-input" placeholder="Benali" />
             </div>
             <div className="form-group" style={{ marginBottom: 0 }}>
               <label className="form-label" style={{ fontSize: '0.7rem', display: 'flex', alignItems: 'center', gap: '4px' }}>
                 <Mail size={12} color="var(--c-purple)" /> {t('employees.form.email')}
               </label>
-              <input type="email" required value={addForm.email} onChange={(e) => setAddForm({ ...addForm, email: e.target.value })} className="form-input" placeholder="jean.d@comp.com" />
+              <input type="email" required value={addForm.email} onChange={(e) => setAddForm({ ...addForm, email: e.target.value })} className="form-input" placeholder="ahmed@rh.ma" />
             </div>
             <div className="form-group" style={{ marginBottom: 0 }}>
               <label className="form-label" style={{ fontSize: '0.7rem', display: 'flex', alignItems: 'center', gap: '4px' }}>
                 <Briefcase size={12} color="var(--c-orange)" /> {t('employees.form.role')}
               </label>
-              <input type="text" required value={addForm.role} onChange={(e) => setAddForm({ ...addForm, role: e.target.value })} className="form-input" placeholder="Développeur" />
+              <input type="text" required value={addForm.poste} onChange={(e) => setAddForm({ ...addForm, poste: e.target.value })} className="form-input" placeholder="Développeur" />
             </div>
             <div className="form-group" style={{ marginBottom: 0 }}>
               <label className="form-label" style={{ fontSize: '0.7rem', display: 'flex', alignItems: 'center', gap: '4px' }}>
                 <Building2 size={12} color="var(--success)" /> {t('employees.form.department')}
               </label>
-              <select className="form-input" value={addForm.dept} onChange={(e) => setAddForm({ ...addForm, dept: e.target.value })}>
-                <option value="Ingénierie">Ingénierie</option>
-                <option value="Marketing">Marketing</option>
-                <option value="Finance">Finance</option>
-                <option value="Ressources Humaines">Ressources Humaines</option>
+              <select className="form-input" value={addForm.service_id} onChange={(e) => setAddForm({ ...addForm, service_id: e.target.value })}>
+                <option value="">Sélectionner...</option>
+                {services.map(s => <option key={s.id} value={s.id}>{s.nom}</option>)}
               </select>
             </div>
             <div className="form-group" style={{ marginBottom: 0 }}>
               <label className="form-label" style={{ fontSize: '0.7rem', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                <ShieldCheck size={12} color="var(--c-blue)" /> {t('employees.form.contract')}
+                <ShieldCheck size={12} color="var(--c-blue)" /> Mot de passe temporaire
               </label>
-              <select className="form-input" value={addForm.contract} onChange={(e) => setAddForm({ ...addForm, contract: e.target.value })}>
-                <option value="CDI">CDI</option>
-                <option value="CDD">CDD</option>
-                <option value="Freelance">Freelance</option>
-              </select>
+              <input type="password" required value={addForm.password} onChange={(e) => setAddForm({ ...addForm, password: e.target.value })} className="form-input" placeholder="••••••••" />
             </div>
           </div>
           <div style={{ display: 'flex', gap: '10px' }}>
-            <button type="submit" className="action-btn primary" disabled={!addForm.firstName || !addForm.lastName || !addForm.email || !addForm.role} style={{ flex: 2, height: '42px', opacity: (!addForm.firstName || !addForm.lastName || !addForm.email || !addForm.role) ? 0.5 : 1, cursor: (!addForm.firstName || !addForm.lastName || !addForm.email || !addForm.role) ? 'not-allowed' : 'pointer' }}>{t('employees.form.createProfile')}</button>
+            <button type="submit" className="action-btn primary" disabled={!addForm.prenom || !addForm.nom || !addForm.email || !addForm.poste || !addForm.password} style={{ flex: 2, height: '42px', opacity: (!addForm.prenom || !addForm.nom || !addForm.email || !addForm.poste || !addForm.password) ? 0.5 : 1, cursor: (!addForm.prenom || !addForm.nom || !addForm.email || !addForm.poste || !addForm.password) ? 'not-allowed' : 'pointer' }}>{t('employees.form.createProfile')}</button>
             <button type="button" className="action-btn" style={{ flex: 1, height: '42px' }} onClick={() => setIsAddModalOpen(false)}>{t('employees.form.cancel')}</button>
           </div>
         </form>
@@ -372,25 +414,34 @@ const Employees = () => {
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', marginBottom: '12px' }}>
               <div className="form-group" style={{ marginBottom: 0 }}>
                 <label className="form-label" style={{ fontSize: '0.7rem', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                  <User size={12} color="var(--primary)" /> {t('employees.table.employee')}
+                  <User size={12} color="var(--primary)" /> {t('employees.form.firstName')}
                 </label>
-                <input type="text" className="form-input" required value={editForm.name} onChange={(e) => setEditForm({ ...editForm, name: e.target.value })} />
+                <input type="text" className="form-input" required value={editForm.prenom} onChange={(e) => setEditForm({ ...editForm, prenom: e.target.value })} />
               </div>
               <div className="form-group" style={{ marginBottom: 0 }}>
                 <label className="form-label" style={{ fontSize: '0.7rem', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                  <Mail size={12} color="var(--c-purple)" /> {t('employees.form.email')}
+                  <User size={12} color="var(--primary)" /> {t('employees.form.lastName')}
                 </label>
-                <input type="email" className="form-input" required value={editForm.email} onChange={(e) => setEditForm({ ...editForm, email: e.target.value })} />
+                <input type="text" className="form-input" required value={editForm.nom} onChange={(e) => setEditForm({ ...editForm, nom: e.target.value })} />
               </div>
-              <div className="form-group" style={{ marginBottom: 0, gridColumn: '1/-1' }}>
+              <div className="form-group" style={{ marginBottom: 0 }}>
                 <label className="form-label" style={{ fontSize: '0.7rem', display: 'flex', alignItems: 'center', gap: '4px' }}>
                   <Briefcase size={12} color="var(--c-orange)" /> {t('employees.form.role')}
                 </label>
-                <input type="text" className="form-input" required value={editForm.role} onChange={(e) => setEditForm({ ...editForm, role: e.target.value })} />
+                <input type="text" className="form-input" required value={editForm.poste} onChange={(e) => setEditForm({ ...editForm, poste: e.target.value })} />
+              </div>
+              <div className="form-group" style={{ marginBottom: 0 }}>
+                <label className="form-label" style={{ fontSize: '0.7rem', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                  <Building2 size={12} color="var(--success)" /> {t('employees.form.department')}
+                </label>
+                <select className="form-input" value={editForm.service_id} onChange={(e) => setEditForm({ ...editForm, service_id: e.target.value })}>
+                  <option value="">Sélectionner...</option>
+                  {services.map(s => <option key={s.id} value={s.id}>{s.nom}</option>)}
+                </select>
               </div>
             </div>
             <div style={{ display: 'flex', gap: '10px' }}>
-              <button type="submit" className="action-btn primary" disabled={!editForm.name || !editForm.email || !editForm.role} style={{ flex: 2, height: '42px', opacity: (!editForm.name || !editForm.email || !editForm.role) ? 0.5 : 1, cursor: (!editForm.name || !editForm.email || !editForm.role) ? 'not-allowed' : 'pointer' }}>{t('employees.form.saveChanges')}</button>
+              <button type="submit" className="action-btn primary" disabled={!editForm.nom || !editForm.prenom || !editForm.poste} style={{ flex: 2, height: '42px', opacity: (!editForm.nom || !editForm.prenom || !editForm.poste) ? 0.5 : 1, cursor: (!editForm.nom || !editForm.prenom || !editForm.poste) ? 'not-allowed' : 'pointer' }}>{t('employees.form.saveChanges')}</button>
               <button type="button" className="action-btn" style={{ flex: 1, height: '42px' }} onClick={() => setIsEditModalOpen(false)}>{t('employees.form.cancel')}</button>
             </div>
           </form>

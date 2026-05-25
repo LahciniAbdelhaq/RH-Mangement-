@@ -17,33 +17,33 @@ const Login = () => {
 
   const [email, setEmail]       = useState('');
   const [password, setPassword] = useState('');
-  const [role, setRole]         = useState('HR_MANAGER');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError]       = useState('');
   const [showPassword, setShowPassword] = useState(false);
 
-  const roles = [
-    { id: 'EMPLOYEE', label: t('auth.employee') },
-    { id: 'HR_AGENT', label: t('auth.hrAgent') },
-    { id: 'HR_MANAGER', label: t('auth.hrManager') },
-    { id: 'DEPARTMENT_MANAGER', label: t('auth.manager') },
-    { id: 'INTERIM_MANAGER', label: t('auth.interimManager') },
-    { id: 'SECRETARY_GENERAL', label: 'Secrétaire Générale' },
-  ];
+  const demoAccounts = import.meta.env.DEV ? [
+    { email: 'admin@rh.ma',     label: 'Admin RH' },
+    { email: 'agent@rh.ma',     label: 'Agent RH' },
+    { email: 'chef@service.ma', label: 'Chef Service' },
+    { email: 'employe@rh.ma',   label: 'Employé' },
+  ] : [];
 
-  const handleLogin = (e) => {
+  const handleLogin = async (e) => {
     e.preventDefault();
     setIsLoading(true);
     setError('');
-    setTimeout(() => {
-      const result = login(email, password, role);
+    try {
+      const result = await login(email, password);
       if (result?.success) {
         navigate('/dashboard');
       } else {
-        setError(t('auth.invalidCredentials'));
-        setIsLoading(false);
+        setError(result?.message ?? t('auth.invalidCredentials'));
       }
-    }, 1200);
+    } catch {
+      setError(t('auth.invalidCredentials'));
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const isDark = theme === 'dark';
@@ -70,9 +70,6 @@ const Login = () => {
     <div style={{ height: '100vh', overflow: 'hidden', display: 'flex', backgroundColor: isDark ? '#0f172a' : '#f8fafc', transition: 'background .3s' }}>
 
       {/* ── LEFT PANEL ── */}
-      <div style={{ display: 'none' }} className="lg:flex" style2={{ width: '55%', position: 'relative', overflow: 'hidden', display: 'flex' }}>
-        {/* We keep this as Tailwind since it's purely decorative */}
-      </div>
       <div className="hidden lg:block relative overflow-hidden" style={{ width: '55%' }}>
         <img
           src="https://images.unsplash.com/photo-1522071820081-009f0129c71c?auto=format&fit=crop&q=80&w=2000"
@@ -132,6 +129,27 @@ const Login = () => {
             </h2>
           </div>
 
+          {/* Quick-fill demo accounts — DEV only */}
+          {import.meta.env.DEV && demoAccounts.length > 0 && (
+            <div style={{ marginBottom: 16 }}>
+              <p style={{ fontSize: 11, fontWeight: 600, color: isDark ? '#64748b' : '#94a3b8', textTransform: 'uppercase', letterSpacing: '.06em', marginBottom: 8 }}>
+                Comptes de test
+              </p>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+                {demoAccounts.map(acc => (
+                  <button
+                    key={acc.email}
+                    type="button"
+                    onClick={() => { setEmail(acc.email); setPassword('Password123!'); setError(''); }}
+                    style={{ fontSize: 11, padding: '4px 10px', borderRadius: 6, border: `1px solid ${isDark ? '#334155' : '#e2e8f0'}`, background: isDark ? '#1e293b' : '#f8fafc', color: isDark ? '#94a3b8' : '#64748b', cursor: 'pointer', fontFamily: 'inherit' }}
+                  >
+                    {acc.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+
           {/* Error */}
           <AnimatePresence>
             {error && (
@@ -147,7 +165,7 @@ const Login = () => {
           <form onSubmit={handleLogin} style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
 
             {/* Role */}
-            <div>
+            {/* <div>
               <label style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: 13, fontWeight: 700, color: isDark ? '#cbd5e1' : '#374151', marginBottom: 8 }}>
                 <span style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: 22, height: 22, borderRadius: '6px', background: 'rgba(147,51,234,.1)', color: '#9333ea' }}><UserCheck style={{ width: 12, height: 12 }} /></span>
                 {t('auth.role')}
@@ -159,7 +177,7 @@ const Login = () => {
                 </select>
                 <ChevronDown style={{ position: 'absolute', right: 14, top: '50%', transform: 'translateY(-50%)', width: 16, height: 16, color: isDark ? '#64748b' : '#9ca3af', pointerEvents: 'none' }} />
               </div>
-            </div>
+            </div> */}
 
             {/* Email */}
             <div>
@@ -239,8 +257,8 @@ const Login = () => {
               type="submit"
               disabled={isLoading}
               style={{ marginTop: 4, width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10, background: '#2563eb', color: '#fff', fontWeight: 700, fontSize: 15, padding: '15px 24px', borderRadius: 12, border: 'none', cursor: isLoading ? 'not-allowed' : 'pointer', opacity: isLoading ? 0.7 : 1, boxShadow: '0 4px 14px rgba(37,99,235,.35)', fontFamily: 'inherit', transition: 'background .15s' }}
-              onMouseEnter={(e) => { if (!isLoading) e.target.style.background = '#1d4ed8'; }}
-              onMouseLeave={(e) => { e.target.style.background = '#2563eb'; }}
+              onMouseEnter={(e) => { if (!isLoading) e.currentTarget.style.background = '#1d4ed8'; }}
+              onMouseLeave={(e) => { e.currentTarget.style.background = '#2563eb'; }}
             >
               {isLoading ? (
                 <><Loader2 style={{ width: 18, height: 18, animation: 'spin 1s linear infinite' }} />{t('auth.signingIn')}</>

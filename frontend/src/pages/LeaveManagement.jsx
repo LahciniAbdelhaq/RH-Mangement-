@@ -3,10 +3,11 @@ import Modal from '../components/Modal';
 import { motion } from 'framer-motion';
 import { useToast } from '../context/ToastContext';
 import { useAuth } from '../context/AuthContext';
-import { logSystemActivity } from '../utils/rbac';
 import { Calendar, Clock, Umbrella, HeartPulse, User, MapPin, CheckCircle2, X } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router-dom';
+import { congeApi } from '../services/api';
+import { logSystemActivity } from '../utils/rbac';
 
 const LeaveManagement = () => {
   const { showToast } = useToast();
@@ -17,26 +18,31 @@ const LeaveManagement = () => {
   const isDeptManager = effectiveRole === 'DEPARTMENT_MANAGER' || effectiveRole === 'INTERIM_MANAGER';
   const isHR = effectiveRole === 'HR_MANAGER' || effectiveRole === 'HR_AGENT';
 
-  const defaultAbsences = [
-    { id: 1, name: "Emma Wilson", dept: "Dép. Ventes", type: "Congé Annuel", period: "15 Oct - 20 Oct", duration: "5 jours", status: "Approuvé", initials: "EW", bg: "#2563EB" },
-    { id: 2, name: "David Chen", dept: "Ingénierie", type: "Maladie", period: "01 Nov - 03 Nov", duration: "3 jours", status: "Approuvé", initials: "DC", bg: "#10B981" },
-    { id: 3, name: "Steve Jobs", dept: "Marketing", type: "Congé Annuel", period: "20 Déc - 02 Jan", duration: "14 jours", status: "En attente", initials: "SJ", bg: "#F59E0B" },
-    { id: 4, name: "Alex Kim", dept: "Finance", type: "Maladie", period: "13 Nov - 14 Nov", duration: "2 jours", status: "En attente", initials: "AK", bg: "#9333EA" },
-    { id: 5, name: "Ali Benali", dept: "Ingénierie", type: "Congé Annuel", period: "10 Déc - 12 Déc", duration: "2 jours", status: "En attente", initials: "AB", bg: "#059669" }
-  ];
+  const [absences, setAbsences] = useState([]);
+  const [loadingLeaves, setLoadingLeaves] = useState(true);
 
-  const [absences, setAbsences] = useState(() => {
-    try {
-      const saved = localStorage.getItem('system_leaves');
-      return saved ? JSON.parse(saved) : defaultAbsences;
-    } catch (e) {
-      return defaultAbsences;
-    }
+  const normaliseConge = (c) => ({
+    id: c.id,
+    employe_id: c.employe?.id ?? null,
+    name: c.employe ? `${c.employe.prenom} ${c.employe.nom}` : '',
+    dept: c.employe?.service?.nom ?? '',
+    type: c.motif ?? 'Congé Annuel',
+    period: `${c.dateDebut?.substring(0,10)} - ${c.dateFin?.substring(0,10)}`,
+    dateDebut: c.dateDebut,
+    dateFin: c.dateFin,
+    duration: `${c.nombreJours ?? 1} jour${(c.nombreJours ?? 1) > 1 ? 's' : ''}`,
+    status: c.statut === 'APPROUVE' ? 'Approuvé' : c.statut === 'REFUSE' ? 'Refusé' : 'En attente',
+    statut: c.statut,
+    initials: c.employe ? `${c.employe.prenom[0]}${c.employe.nom[0]}` : '?',
+    bg: '#2563EB',
   });
 
   useEffect(() => {
-    localStorage.setItem('system_leaves', JSON.stringify(absences));
-  }, [absences]);
+    congeApi.list()
+      .then(r => setAbsences((r.data?.data ?? r.data ?? []).map(normaliseConge)))
+      .catch(() => {})
+      .finally(() => setLoadingLeaves(false));
+  }, []);
 
   const [isLeaveModalOpen, setIsLeaveModalOpen] = useState(false);
   const [isViewModalOpen, setIsViewModalOpen] = useState(false);
@@ -48,7 +54,7 @@ const LeaveManagement = () => {
   const [editForm, setEditForm] = useState({ type: '', period: '' });
 
   const filteredAbsences = absences.filter(abs => {
-    if (isEmployee) return abs.name === user?.name;
+    if (isEmployee) return abs.employe_id === user?.employe_id || abs.name === user?.name;
     if (isDeptManager) {
       const uDept = user?.dept?.toLowerCase() || '';
       return abs.dept.toLowerCase().includes(uDept) || uDept.includes(abs.dept.toLowerCase()) || abs.name === user?.name;
@@ -82,38 +88,36 @@ const LeaveManagement = () => {
     return date.toLocaleDateString('fr-FR', { day: '2-digit', month: 'short' });
   };
 
-  const onLeaveSubmit = (e) => {
+  const onLeaveSubmit = async (e) => {
     e.preventDefault();
-    const newAbsence = {
-      id: Date.now(),
-      name: user?.name || "Utilisateur",
-      dept: user?.dept || "Général",
-      type: leaveForm.type,
-      period: `${formatDateShort(leaveForm.start)} - ${formatDateShort(leaveForm.end)}`,
-      duration: calculateDuration(leaveForm.start, leaveForm.end),
-      status: "En attente",
-      initials: (user?.name || "Utilisateur").split(' ').map(n=>n[0]).join(''),
-      bg: "#2563EB"
-    };
-
-    setAbsences(prev => [newAbsence, ...prev]);
-    showToast(i18n.language === 'fr' ? 'Demande de congé enregistrée avec succès !' : 'Leave request recorded successfully!', 'success');
-    logSystemActivity("Demande Congé", user?.name, `Demande de congé: ${newAbsence.duration} (${newAbsence.type})`);
-    setLeaveForm({ type: 'Congé Annuel', start: '', end: '', motif: '' });
-    setIsLeaveModalOpen(false);
+    try {
+      const r = await congeApi.create({ dateDebut: leaveForm.start, dateFin: leaveForm.end, motif: leaveForm.type });
+      setAbsences(prev => [normaliseConge(r.data?.data ?? r.data), ...prev]);
+      showToast(i18n.language === 'fr' ? 'Demande de congé enregistrée avec succès !' : 'Leave request recorded successfully!', 'success');
+      setLeaveForm({ type: 'Congé Annuel', start: '', end: '', motif: '' });
+      setIsLeaveModalOpen(false);
+    } catch (err) {
+      showToast(err.response?.data?.message ?? 'Erreur lors de la soumission', 'error');
+    }
   };
 
-  const onApprove = (id, e) => {
+  const onApprove = async (id, e) => {
     if(e) e.stopPropagation();
-    setAbsences(prev => prev.map(abs => abs.id === id ? { ...abs, status: 'Approuvé' } : abs));
+    try {
+      await congeApi.approve(id);
+      setAbsences(prev => prev.map(abs => abs.id === id ? { ...abs, status: 'Approuvé', statut: 'APPROUVE' } : abs));
+    } catch {}
     showToast(i18n.language === 'fr' ? (isDeptManager ? 'Congé validé par le département.' : 'Congé approuvé avec succès.') : (isDeptManager ? 'Leave validated by department.' : 'Leave approved successfully.'), 'success');
     logSystemActivity("Approbation Congé", user?.name, `Congé approuvé pour la demande #${id}`);
     setIsViewModalOpen(false);
   };
 
-  const onReject = (id, e) => {
+  const onReject = async (id, e) => {
     if(e) e.stopPropagation();
-    setAbsences(prev => prev.map(abs => abs.id === id ? { ...abs, status: 'Rejeté' } : abs));
+    try {
+      await congeApi.reject(id);
+    } catch {}
+    setAbsences(prev => prev.map(abs => abs.id === id ? { ...abs, status: 'Rejeté', statut: 'REFUSE' } : abs));
     showToast(i18n.language === 'fr' ? 'La demande de congé a été rejetée.' : 'Leave request has been rejected.', 'error');
     logSystemActivity("Rejet Congé", user?.name, `Congé rejeté pour la demande #${id}`);
     setIsViewModalOpen(false);

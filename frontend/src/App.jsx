@@ -24,6 +24,7 @@ import Absences from './pages/Absences';
 import Assignments from './pages/Assignments';
 import Signature from './pages/Signature';
 import Users from './pages/Users';
+import CorrectionDossier from './pages/CorrectionDossier';
 
 import { useAuth } from './context/AuthContext';
 import { ToastProvider } from './context/ToastContext';
@@ -73,7 +74,7 @@ function App() {
             
             {/* Employee Management: Restricted from standard Employee role */}
             <Route path="employees" element={
-              <ProtectedRoute allowedRoles={['HR_MANAGER', 'HR_AGENT', 'DEPARTMENT_MANAGER', 'INTERIM_MANAGER']}>
+              <ProtectedRoute allowedRoles={['HR_MANAGER', 'HR_AGENT', 'DEPARTMENT_MANAGER']}>
                 <Employees />
               </ProtectedRoute>
             } />
@@ -90,9 +91,12 @@ function App() {
             {/* Gestion des Formations - All roles */}
             <Route path="trainings" element={<Trainings />} />
 
+            {/* Correction Dossier Administratif - All roles */}
+            <Route path="corrections" element={<CorrectionDossier />} />
+
             {/* Absences & Retards - HR and Managers */}
             <Route path="absences" element={
-              <ProtectedRoute allowedRoles={['HR_MANAGER', 'HR_AGENT', 'DEPARTMENT_MANAGER', 'INTERIM_MANAGER']}>
+              <ProtectedRoute allowedRoles={['HR_MANAGER', 'HR_AGENT', 'DEPARTMENT_MANAGER']}>
                 <Absences />
               </ProtectedRoute>
             } />

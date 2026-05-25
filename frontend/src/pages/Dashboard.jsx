@@ -9,6 +9,7 @@ import Pagination from '../components/Pagination';
 import { User, Building2, Calendar, Fingerprint, FileText, Share2, Download, Mail, Briefcase, AlertTriangle, Umbrella } from 'lucide-react';
 import { jsPDF } from 'jspdf';
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
+import { employeApi, attestationApi, congeApi, absenceApi } from '../services/api';
 
 const data = [
   { name: 'Jan', requests: 40, absences: 24 },
@@ -30,9 +31,58 @@ const Dashboard = () => {
   const [isDetailsModalOpen, setIsDetailsModalOpen] = useState(false);
   const [selectedRequest, setSelectedRequest] = useState(null);
   const [isMounted, setIsMounted] = useState(false);
+  const [liveStats, setLiveStats] = useState({ employees: 0, pending: 0, onLeave: 0 });
+  const [recentRequests, setRecentRequests] = useState([]);
+  const [employeesList, setEmployeesList] = useState([]);
 
   useEffect(() => {
     setIsMounted(true);
+  }, []);
+
+  useEffect(() => {
+    Promise.all([
+      employeApi.list(),
+      attestationApi.list(),
+      congeApi.list(),
+    ]).then(([empResp, attResp, congeResp]) => {
+      const emps = empResp.data?.data ?? empResp.data ?? [];
+      const atts = attResp.data?.data ?? attResp.data ?? [];
+      const conges = congeResp.data?.data ?? congeResp.data ?? [];
+
+      setEmployeesList(emps);
+      setLiveStats({
+        employees: emps.length,
+        pending: atts.filter(a => a.statut === 'EN_ATTENTE').length + conges.filter(c => c.statut === 'EN_ATTENTE').length,
+        onLeave: emps.filter(e => e.statut === 'CONGE').length,
+      });
+
+      const TYPE_LABEL = { travail: 'Attestation de Travail', salaire: 'Attestation de Salaire', administratif: 'Bulletin de Paie' };
+      const attRows = atts.slice(0, 5).map(a => ({
+        id: `att-${a.id}`,
+        icon: 'fa-file-contract', iconBg: '#DBEAFE', iconColor: '#2563EB',
+        title: TYPE_LABEL[a.type] ?? a.type,
+        sub: `Attestation`,
+        dept: a.employe?.service?.nom ?? 'Général',
+        initials: a.employe ? `${(a.employe.prenom ?? ' ')[0]}${(a.employe.nom ?? ' ')[0]}` : '?',
+        avatarBg: '#2563EB',
+        owner: a.employe ? `${a.employe.prenom ?? ''} ${a.employe.nom ?? ''}`.trim() : '',
+        status: a.statut === 'SIGNEE' ? 'Terminé' : a.statut === 'GENEREE' ? 'En cours' : a.statut === 'REFUSEE' ? 'Rejeté' : 'En Attente',
+        date: a.dateDemande ? a.dateDemande.substring(0, 10) : '',
+      }));
+      const congeRows = conges.slice(0, 5).map(c => ({
+        id: `cg-${c.id}`,
+        icon: 'fa-plane-departure', iconBg: '#ECFCCB', iconColor: '#65A30D',
+        title: 'Demande de Congé',
+        sub: c.motif ?? 'Congé',
+        dept: c.employe?.service?.nom ?? 'Général',
+        initials: c.employe ? `${(c.employe.prenom ?? ' ')[0]}${(c.employe.nom ?? ' ')[0]}` : '?',
+        avatarBg: '#0D9488',
+        owner: c.employe ? `${c.employe.prenom ?? ''} ${c.employe.nom ?? ''}`.trim() : '',
+        status: c.statut === 'APPROUVE' ? 'Terminé' : c.statut === 'APPROUVE_CHEF' ? 'En cours' : c.statut === 'REFUSE' ? 'Rejeté' : 'En Attente',
+        date: c.dateDebut ? c.dateDebut.substring(0, 10) : '',
+      }));
+      setRecentRequests([...attRows, ...congeRows].slice(0, 8));
+    }).catch(() => {});
   }, []);
 
   const handleRequestAction = (row) => {
@@ -264,30 +314,58 @@ const Dashboard = () => {
   };
 
   // --- Employee Form State ---
-  const [employeeForm, setEmployeeForm] = useState({ prenom: '', nom: '', email: '', poste: '', departement: 'Ingénierie' });
+  const [employeeForm, setEmployeeForm] = useState({ prenom: '', nom: '', email: '', poste: '', departement: '', password: '' });
   const handleEmployeeChange = e => setEmployeeForm(p => ({ ...p, [e.target.name]: e.target.value }));
-  const handleEmployeeSubmit = () => {
-    showToast('Employé ajouté avec succès !', 'success');
-    setEmployeeForm({ prenom: '', nom: '', email: '', poste: '', departement: 'Ingénierie' });
-    setIsEmployeeModalOpen(false);
+  const handleEmployeeSubmit = async () => {
+    try {
+      await employeApi.create({ prenom: employeeForm.prenom, nom: employeeForm.nom, email: employeeForm.email, poste: employeeForm.poste, password: employeeForm.password, statut: 'ACTIF' });
+      showToast(`Employé ${employeeForm.prenom} ${employeeForm.nom} ajouté avec succès !`, 'success');
+      setEmployeeForm({ prenom: '', nom: '', email: '', poste: '', departement: '', password: '' });
+      setIsEmployeeModalOpen(false);
+    } catch (err) {
+      showToast(err.response?.data?.message ?? 'Erreur lors de la création', 'error');
+    }
   };
 
   // --- Request Form State (Manager) ---
-  const [requestForm, setRequestForm] = useState({ type: 'Attestation de Travail', priorite: 'Normale (Délai 48h)', description: '', fichier: null });
+  const ATTEST_LABEL_TYPE = { 'Attestation de Travail': 'travail', 'Attestation de Salaire': 'salaire', 'Bulletin de Paie': 'administratif' };
+  const [requestForm, setRequestForm] = useState({ type: 'Attestation de Travail', priorite: 'Normale', description: '', fichier: null });
   const handleRequestChange = e => setRequestForm(p => ({ ...p, [e.target.name]: e.target.value }));
-  const handleRequestSubmit = () => {
-    showToast('Votre demande a été soumise à l\'équipe RH.', 'info');
-    setRequestForm({ type: 'Attestation de Travail', priorite: 'Normale (Délai 48h)', description: '', fichier: null });
-    setIsRequestModalOpen(false);
+  const handleRequestSubmit = async () => {
+    const apiType = ATTEST_LABEL_TYPE[requestForm.type];
+    try {
+      if (apiType) {
+        await attestationApi.create({ type: apiType });
+        showToast('Votre demande a été soumise à l\'équipe RH.', 'success');
+      } else {
+        showToast('Votre demande a été enregistrée.', 'info');
+      }
+      setRequestForm({ type: 'Attestation de Travail', priorite: 'Normale', description: '', fichier: null });
+      setIsRequestModalOpen(false);
+    } catch (err) {
+      showToast(err.response?.data?.message ?? 'Erreur lors de la soumission', 'error');
+    }
   };
 
   // --- Leave Form State ---
-  const [leaveForm, setLeaveForm] = useState({ employe: '', type: 'Congé Annuel', dateDebut: '', dateFin: '' });
+  const [leaveForm, setLeaveForm] = useState({ employe_id: '', motif: 'Congé Annuel', dateDebut: '', dateFin: '' });
   const handleLeaveChange = e => setLeaveForm(p => ({ ...p, [e.target.name]: e.target.value }));
-  const handleLeaveSubmit = () => {
-    showToast('Absence enregistrée dans le système.', 'success');
-    setLeaveForm({ employe: '', type: 'Congé Annuel', dateDebut: '', dateFin: '' });
-    setIsLeaveModalOpen(false);
+  const handleLeaveSubmit = async () => {
+    try {
+      await absenceApi.create({
+        employe_id: Number(leaveForm.employe_id) || undefined,
+        type: leaveForm.motif,
+        motif: leaveForm.motif,
+        dateDebut: leaveForm.dateDebut,
+        dateFin: leaveForm.dateFin,
+        statut: 'JUSTIFIEE',
+      });
+      showToast('Absence enregistrée dans le système.', 'success');
+      setLeaveForm({ employe_id: '', motif: 'Congé Annuel', dateDebut: '', dateFin: '' });
+      setIsLeaveModalOpen(false);
+    } catch (err) {
+      showToast(err.response?.data?.message ?? 'Erreur lors de l\'enregistrement', 'error');
+    }
   };
 
   // --- Dashboard Table Pagination ---
@@ -680,7 +758,7 @@ const Dashboard = () => {
           submitColor="var(--c-blue)"
           onSubmit={handleEmployeeSubmit}
           submitText="Ajouter l'employé"
-          isSubmitDisabled={!employeeForm.prenom || !employeeForm.nom || !employeeForm.email || !employeeForm.poste || !employeeForm.departement}
+          isSubmitDisabled={!employeeForm.prenom || !employeeForm.nom || !employeeForm.email || !employeeForm.poste}
         >
           <form onSubmit={e => { e.preventDefault(); handleEmployeeSubmit(); }} style={{ padding: '4px 0' }}>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', marginBottom: '10px' }}>
@@ -710,14 +788,9 @@ const Dashboard = () => {
               </div>
               <div className="form-group" style={{ marginBottom: 0 }}>
                 <label className="form-label" style={{ fontSize: '0.7rem', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                  <Building2 size={12} color="var(--success)" /> Département
+                  <i className="fas fa-lock" style={{ color: 'var(--text-gray)', fontSize: '10px' }}></i> Mot de passe
                 </label>
-                <select name="departement" className="form-input" value={employeeForm.departement} onChange={handleEmployeeChange}>
-                  <option>Ingénierie</option>
-                  <option>Marketing</option>
-                  <option>Ventes</option>
-                  <option>Ressources Humaines</option>
-                </select>
+                <input type="password" name="password" className="form-input" placeholder="Mot de passe" value={employeeForm.password} onChange={handleEmployeeChange} required />
               </div>
             </div>
           </form>
@@ -734,7 +807,7 @@ const Dashboard = () => {
           submitColor="var(--c-orange)"
           onSubmit={handleLeaveSubmit}
           submitText="Enregistrer l'absence"
-          isSubmitDisabled={!leaveForm.employe || !leaveForm.type || !leaveForm.dateDebut || !leaveForm.dateFin}
+          isSubmitDisabled={!leaveForm.dateDebut || !leaveForm.dateFin}
         >
           <form onSubmit={e => { e.preventDefault(); handleLeaveSubmit(); }} style={{ padding: '4px 0' }}>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', marginBottom: '10px' }}>
@@ -742,17 +815,18 @@ const Dashboard = () => {
                 <label className="form-label" style={{ fontSize: '0.7rem', display: 'flex', alignItems: 'center', gap: '4px' }}>
                   <User size={12} color="var(--primary)" /> Employé
                 </label>
-                <select name="employe" className="form-input" value={leaveForm.employe} onChange={handleLeaveChange} required>
+                <select name="employe_id" className="form-input" value={leaveForm.employe_id} onChange={handleLeaveChange}>
                   <option value="">Sélectionnez un employé...</option>
-                  <option value="john-davis">John Davis (Opérations)</option>
-                  <option value="maria-chen">Maria Chen (Conformité)</option>
+                  {employeesList.map(e => (
+                    <option key={e.id} value={e.id}>{`${e.prenom ?? ''} ${e.nom ?? ''}`.trim()} {e.service?.nom ? `(${e.service.nom})` : ''}</option>
+                  ))}
                 </select>
               </div>
               <div className="form-group" style={{ marginBottom: 0, gridColumn: '1/-1' }}>
                 <label className="form-label" style={{ fontSize: '0.7rem', display: 'flex', alignItems: 'center', gap: '4px' }}>
                   <Umbrella size={12} color="var(--c-purple)" /> Type de congé
                 </label>
-                <select name="type" className="form-input" value={leaveForm.type} onChange={handleLeaveChange}>
+                <select name="motif" className="form-input" value={leaveForm.motif} onChange={handleLeaveChange}>
                   <option>Congé Annuel</option>
                   <option>Congé Maladie</option>
                   <option>Télétravail Exceptionnel</option>
@@ -790,9 +864,9 @@ const Dashboard = () => {
   }[effectiveRole] || t('auth.manager');
 
   const stats = {
-    activeEmployees: isDeptManager ? "42" : "452",
-    pendingVal: isDeptManager ? "3" : "18",
-    onLeaveToday: isDeptManager ? "2" : "8",
+    activeEmployees: isDeptManager ? "42" : String(liveStats.employees),
+    pendingVal: isDeptManager ? "3" : String(liveStats.pending),
+    onLeaveToday: isDeptManager ? "2" : String(liveStats.onLeave),
     complianceRate: isDeptManager ? "95%" : "87%"
   };
 
@@ -1110,13 +1184,10 @@ const Dashboard = () => {
               </tr>
             </thead>
             <tbody>
-              {[
-                { icon: 'fa-file-invoice', iconBg: '#DBEAFE', iconColor: '#2563EB', title: t('dashboard.salaryCertificate'), sub: `PDF • ${t('requests.table.request')}`, dept: 'Finance', initials: 'SM', avatarBg: '#2563EB', owner: 'Sarah Miller', status: t('requests.tabs.completed'), statusBg: '#DCFCE7', statusColor: '#16A34A', date: '10 Nov, 2026' },
-                { icon: 'fa-plane-departure', iconBg: '#ECFCCB', iconColor: '#65A30D', title: t('requests.table.leave'), sub: `14 ${t('employees.stats.onLeave')} • Formulaire`, dept: 'Opérations', initials: 'JD', avatarBg: '#0D9488', owner: 'John Davis', status: t('requests.tabs.pending'), statusBg: '#FEF3C7', statusColor: '#D97706', date: '12 Nov, 2026' },
-                { icon: 'fa-briefcase-medical', iconBg: '#F3E8FF', iconColor: '#9333EA', title: t('requests.table.medical'), sub: `Médical • PDF`, dept: 'RH', initials: 'AK', avatarBg: '#9333EA', owner: 'Alex Kim', status: t('requests.tabs.completed'), statusBg: '#DCFCE7', statusColor: '#16A34A', date: '08 Nov, 2026' },
-                { icon: 'fa-shield-alt', iconBg: '#CCFBF1', iconColor: '#0D9488', title: t('requests.table.complianceChecklist'), sub: 'v1.5 • XLSX', dept: 'Conformité', initials: 'MC', avatarBg: '#10B981', owner: 'Maria Chen', status: t('requests.tabs.inProgress'), statusBg: '#FEF3C7', statusColor: '#D97706', date: '11 Nov, 2026' },
-              ].map((row, i) => (
-                <tr key={i}>
+              {recentRequests.length === 0 ? (
+                <tr><td colSpan={6} style={{ textAlign: 'center', padding: '30px', color: 'var(--text-gray)' }}>Aucune demande récente.</td></tr>
+              ) : recentRequests.map((row, i) => (
+                <tr key={row.id || i}>
                   <td>
                     <div className="user-cell">
                       <div className="icon-box" style={{ background: row.iconBg, color: row.iconColor }}>
@@ -1190,7 +1261,7 @@ const Dashboard = () => {
             <input type="email" name="email" className="form-input" placeholder="jean.dupont@entreprise.com" value={employeeForm.email} onChange={handleEmployeeChange} required />
           </div>
 
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '24px' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '12px' }}>
             <div className="form-group" style={{ marginBottom: 0 }}>
               <label className="form-label" style={{ fontSize: '0.7rem', display: 'flex', alignItems: 'center', gap: '4px' }}>
                 <Briefcase size={12} color="var(--c-orange)" /> Poste
@@ -1199,14 +1270,9 @@ const Dashboard = () => {
             </div>
             <div className="form-group" style={{ marginBottom: 0 }}>
               <label className="form-label" style={{ fontSize: '0.7rem', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                <Building2 size={12} color="var(--success)" /> Département
+                <i className="fas fa-lock" style={{ color: 'var(--text-gray)', fontSize: '10px' }}></i> Mot de passe
               </label>
-              <select name="departement" className="form-input" value={employeeForm.departement} onChange={handleEmployeeChange}>
-                <option>Ingénierie</option>
-                <option>Marketing</option>
-                <option>Ventes</option>
-                <option>RH</option>
-              </select>
+              <input type="password" name="password" className="form-input" placeholder="Mot de passe" value={employeeForm.password} onChange={handleEmployeeChange} required />
             </div>
           </div>
 
@@ -1291,10 +1357,11 @@ const Dashboard = () => {
             <label className="form-label" style={{ fontSize: '0.7rem', display: 'flex', alignItems: 'center', gap: '4px' }}>
               <User size={12} color="var(--primary)" /> Collaborateur
             </label>
-            <select name="employe" className="form-input" value={leaveForm.employe} onChange={handleLeaveChange} required>
+            <select name="employe_id" className="form-input" value={leaveForm.employe_id} onChange={handleLeaveChange}>
               <option value="">Choisir un employé...</option>
-              <option value="john-davis">John Davis</option>
-              <option value="maria-chen">Maria Chen</option>
+              {employeesList.map(e => (
+                <option key={e.id} value={e.id}>{`${e.prenom ?? ''} ${e.nom ?? ''}`.trim()}</option>
+              ))}
             </select>
           </div>
 
@@ -1302,7 +1369,7 @@ const Dashboard = () => {
             <label className="form-label" style={{ fontSize: '0.7rem', display: 'flex', alignItems: 'center', gap: '4px' }}>
               <Umbrella size={12} color="var(--success)" /> Motif d'absence
             </label>
-            <select name="type" className="form-input" value={leaveForm.type} onChange={handleLeaveChange}>
+            <select name="motif" className="form-input" value={leaveForm.motif} onChange={handleLeaveChange}>
               <option>Congé Annuel</option>
               <option>Congé Maladie</option>
               <option>Télétravail</option>

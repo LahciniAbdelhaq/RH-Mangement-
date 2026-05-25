@@ -1,19 +1,12 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { useAuth } from '../context/AuthContext';
 import { useToast } from '../context/ToastContext';
 import { useTranslation } from 'react-i18next';
 import Modal from '../components/Modal';
 import Pagination from '../components/Pagination';
-import { logSystemActivity, triggerWorkflowNotification } from '../utils/rbac';
-
-const MOCK_ABSENCES = [
-  { id: 'ABS-001', employee: 'Ali Benali', dept: 'Ingénierie', type: 'absence', date: '2026-05-20', hours: 8, reason: 'Non justifiée', justificatif: null, status: 'unjustified', warning: true },
-  { id: 'ABS-002', employee: 'Sara Hamidi', dept: 'Marketing', type: 'late', date: '2026-05-22', hours: 1.5, reason: 'Transports', justificatif: null, status: 'justified', warning: false },
-  { id: 'ABS-003', employee: 'Karim Ouali', dept: 'Finance', type: 'absence', date: '2026-05-21', hours: 4, reason: 'Maladie', justificatif: 'certificat_medical.pdf', status: 'justifiedMedical', warning: false },
-  { id: 'ABS-004', employee: 'Nadia Benmoussa', dept: 'Ingénierie', type: 'late', date: '2026-05-23', hours: 0.5, reason: 'Non justifié', justificatif: null, status: 'unjustified', warning: false },
-  { id: 'ABS-005', employee: 'Youssef Tazi', dept: 'RH', type: 'absence', date: '2026-05-19', hours: 8, reason: 'Raison personnelle', justificatif: 'justificatif.pdf', status: 'justified', warning: false },
-];
+import { logSystemActivity } from '../utils/rbac';
+import { absenceApi, employeApi } from '../services/api';
 
 const TYPE_CONFIG = {
   'absence': { color: '#EF4444', bg: '#FEF2F2', icon: 'fas fa-user-times' },
@@ -26,11 +19,28 @@ const STATUS_CONFIG = {
   'inProgress':       { color: '#F59E0B', bg: '#FFFBEB' },
 };
 
+const normaliseAbsence = (a) => ({
+  id: a.id,
+  idLabel: `ABS-${String(a.id).padStart(3, '0')}`,
+  employee: a.employe ? `${a.employe.prenom ?? ''} ${a.employe.nom ?? ''}`.trim() : '',
+  employe_id: a.employe?.id,
+  dept: a.employe?.service?.nom ?? '',
+  type: a.type === 'RETARD' ? 'late' : 'absence',
+  date: a.dateDebut ? a.dateDebut.substring(0, 10) : '',
+  hours: a.nbHeures ?? 8,
+  reason: a.motif ?? '',
+  justificatif: a.justificatif ?? null,
+  status: a.statut === 'JUSTIFIEE' ? 'justified' : a.statut === 'INJUSTIFIEE' ? 'unjustified' : 'inProgress',
+  warning: a.statut === 'INJUSTIFIEE' && a.type === 'ABSENCE',
+});
+
 export default function Absences() {
   const { user, effectiveRole } = useAuth();
   const { showToast } = useToast();
   const { t } = useTranslation();
-  const [absences, setAbsences] = useState(MOCK_ABSENCES);
+  const [absences, setAbsences] = useState([]);
+  const [loadingList, setLoadingList] = useState(true);
+  const [employes, setEmployes] = useState([]);
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
   const [selectedAbs, setSelectedAbs] = useState(null);
@@ -42,40 +52,50 @@ export default function Absences() {
   const isHR = effectiveRole === 'HR_MANAGER' || effectiveRole === 'HR_AGENT';
 
   const [form, setForm] = useState({
-    employee: '', dept: 'Ingénierie', type: 'absence', date: '', hours: 8, reason: '', status: 'unjustified'
+    employe_id: '', type: 'ABSENCE', dateDebut: '', dateFin: '', motif: '', statut: 'INJUSTIFIEE'
   });
-  const [isEmployeeSearchOpen, setIsEmployeeSearchOpen] = useState(false);
-  const [employeeSearch, setEmployeeSearch] = useState('');
-  
   const handleFormChange = e => setForm(p => ({ ...p, [e.target.name]: e.target.value }));
 
-  const handleCreate = () => {
-    if (!form.employee || !form.date) {
+  useEffect(() => {
+    absenceApi.list()
+      .then(r => setAbsences((r.data?.data ?? r.data ?? []).map(normaliseAbsence)))
+      .catch(() => showToast('Erreur chargement absences', 'error'))
+      .finally(() => setLoadingList(false));
+    if (isHR) {
+      employeApi.list()
+        .then(r => setEmployes(r.data?.data ?? r.data ?? []))
+        .catch(() => {});
+    }
+  }, []);
+
+  const handleCreate = async () => {
+    if (!form.employe_id || !form.dateDebut || !form.dateFin) {
       showToast(t('absences.toast.missingFields'), 'warning');
       return;
     }
-    const newAbs = {
-      id: `ABS-${Date.now()}`,
-      ...form,
-      hours: Number(form.hours),
-      justificatif: null,
-      warning: form.status === 'unjustified' && form.type === 'absence',
-    };
-    setAbsences(prev => [newAbs, ...prev]);
-    if (newAbs.warning) {
-      triggerWorkflowNotification(form.employee, 'Avertissement Absence', `Une absence non justifiée du ${form.date} a été enregistrée.`, 'warning');
+    try {
+      const r = await absenceApi.create(form);
+      const newAbs = normaliseAbsence(r.data?.data ?? r.data);
+      setAbsences(prev => [newAbs, ...prev]);
+      logSystemActivity('Enregistrement Absence', user?.name, `${form.type} enregistrée – ${form.dateDebut}`);
+      showToast(t('absences.toast.recorded', { type: form.type === 'RETARD' ? 'retard' : 'absence' }), 'success');
+      setIsCreateModalOpen(false);
+      setForm({ employe_id: '', type: 'ABSENCE', dateDebut: '', dateFin: '', motif: '', statut: 'INJUSTIFIEE' });
+    } catch (err) {
+      showToast(err.response?.data?.message ?? 'Erreur lors de l\'enregistrement', 'error');
     }
-    logSystemActivity('Enregistrement Absence', user?.name, `${form.type} enregistrée pour ${form.employee} – ${form.date}`);
-    showToast(`${t('absences.toast.recorded', { type: t(`absences.modal.${form.type}`) })}${newAbs.warning ? ' — ' + t('absences.toast.warningNote') : ''}`, newAbs.warning ? 'warning' : 'success');
-    setIsCreateModalOpen(false);
-    setForm({ employee: '', dept: 'Ingénierie', type: 'absence', date: '', hours: 8, reason: '', status: 'unjustified' });
   };
 
-  const handleUploadJustificatif = (id) => {
-    setAbsences(prev => prev.map(a =>
-      a.id === id ? { ...a, justificatif: 'justificatif_uploaded.pdf', status: 'justified', warning: false } : a
-    ));
-    showToast(t('absences.toast.justifAdded'), 'success');
+  const handleUploadJustificatif = async (id) => {
+    try {
+      await absenceApi.update(id, { statut: 'JUSTIFIEE' });
+      setAbsences(prev => prev.map(a =>
+        a.id === id ? { ...a, justificatif: 'justificatif.pdf', status: 'justified', warning: false } : a
+      ));
+      showToast(t('absences.toast.justifAdded'), 'success');
+    } catch {
+      showToast('Erreur mise à jour', 'error');
+    }
   };
 
   const typeFilters = ['all', 'absence', 'late'];
@@ -157,14 +177,16 @@ export default function Absences() {
               </tr>
             </thead>
             <tbody>
-              {paginated.length === 0 ? (
+              {loadingList ? (
+                <tr><td colSpan={9} style={{ textAlign: 'center', padding: '40px', color: 'var(--text-gray)' }}><i className="fas fa-spinner fa-spin" style={{ marginRight: 8 }}></i> Chargement...</td></tr>
+              ) : paginated.length === 0 ? (
                 <tr><td colSpan={9} style={{ textAlign: 'center', padding: '40px', color: 'var(--text-gray)' }}>{t('absences.table.noData')}</td></tr>
               ) : paginated.map(abs => {
                 const typeCfg = TYPE_CONFIG[abs.type];
                 const stsCfg = STATUS_CONFIG[abs.status] || STATUS_CONFIG['inProgress'];
                 return (
                   <tr key={abs.id}>
-                    <td><span style={{ fontFamily: 'monospace', fontWeight: 600, color: 'var(--primary)', fontSize: '0.8rem' }}>{abs.id}</span></td>
+                    <td><span style={{ fontFamily: 'monospace', fontWeight: 600, color: 'var(--primary)', fontSize: '0.8rem' }}>{abs.idLabel}</span></td>
                     <td style={{ fontWeight: 600 }}>{abs.employee}</td>
                     <td><span className="filter-tag blue">{abs.dept}</span></td>
                     <td>
@@ -211,68 +233,18 @@ export default function Absences() {
       <Modal isOpen={isCreateModalOpen} onClose={() => setIsCreateModalOpen(false)}
         title={t('absences.modal.createTitle')} icon="fas fa-user-times" iconColor="#EF4444" iconBg="#FEF2F2"
         submitColor="#EF4444" onSubmit={handleCreate} submitText={t('absences.modal.submit')}
-        isSubmitDisabled={!form.employee || !form.date}>
+        isSubmitDisabled={!form.employe_id || !form.dateDebut || !form.dateFin}>
         <form onSubmit={e => { e.preventDefault(); handleCreate(); }} style={{ padding: '4px 0' }}>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', marginBottom: '10px' }}>
-            <div className="form-group" style={{ marginBottom: 0, position: 'relative', zIndex: 100 }}>
+            <div className="form-group" style={{ marginBottom: 0 }}>
               <label className="form-label" style={{ fontSize: '0.7rem', display: 'flex', alignItems: 'center', gap: '4px' }}>
                 <i className="fas fa-user" style={{ color: 'var(--primary)' }}></i> {t('absences.modal.employeeName')} *
               </label>
-              <div 
-                className="form-input" 
-                style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', cursor: 'pointer', backgroundColor: 'var(--main-bg)' }}
-                onClick={() => setIsEmployeeSearchOpen(!isEmployeeSearchOpen)}
-              >
-                <span style={{ color: form.employee ? 'inherit' : 'var(--text-light)', display: 'flex', alignItems: 'center', gap: '8px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                  {form.employee ? <i className="fas fa-user-circle" style={{ color: 'var(--primary)' }}></i> : null}
-                  {form.employee || t('absences.modal.employeeName')}
-                </span>
-                <i className="fas fa-chevron-down" style={{ fontSize: '0.8rem', color: 'var(--text-gray)' }}></i>
-              </div>
-              {isEmployeeSearchOpen && (
-                <div style={{ position: 'absolute', top: '100%', left: 0, right: 0, backgroundColor: 'var(--main-bg)', border: '1px solid var(--border-color)', borderRadius: '8px', marginTop: '4px', zIndex: 9999, boxShadow: '0 10px 25px -5px rgba(0, 0, 0, 0.2)' }}>
-                  <div style={{ padding: '8px', borderBottom: '1px solid var(--border-color)', backgroundColor: 'var(--sidebar-bg)', borderTopLeftRadius: '8px', borderTopRightRadius: '8px' }}>
-                    <input 
-                      type="text" 
-                      className="form-input" 
-                      placeholder="Rechercher..." 
-                      value={employeeSearch} 
-                      onChange={e => setEmployeeSearch(e.target.value)} 
-                      style={{ padding: '6px 10px', minHeight: '32px', marginBottom: 0, backgroundColor: 'var(--main-bg)' }}
-                      autoFocus
-                    />
-                  </div>
-                  <div style={{ maxHeight: '120px', overflowY: 'auto', backgroundColor: 'var(--main-bg)', borderBottomLeftRadius: '8px', borderBottomRightRadius: '8px' }}>
-                    {['Ali Benali', 'Sara Hamidi', 'Karim Ouali', 'Nadia Benmoussa', 'Youssef Tazi', 'Emma Wilson', 'David Chen', 'Sarah Miller', 'Marcus Rowe'].filter(e => e.toLowerCase().includes(employeeSearch.toLowerCase())).map(emp => (
-                      <div 
-                        key={emp} 
-                        style={{ padding: '10px 12px', cursor: 'pointer', fontSize: '0.85rem', display: 'flex', alignItems: 'center', gap: '10px', transition: 'background-color 0.1s' }}
-                        onClick={() => { setForm(p => ({ ...p, employee: emp })); setIsEmployeeSearchOpen(false); setEmployeeSearch(''); }}
-                        onMouseEnter={e => e.currentTarget.style.backgroundColor = 'var(--primary-bg)'}
-                        onMouseLeave={e => e.currentTarget.style.backgroundColor = 'transparent'}
-                      >
-                        <div style={{ width: '24px', height: '24px', borderRadius: '50%', backgroundColor: 'var(--primary)', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '10px', fontWeight: 'bold' }}>
-                          {emp.split(' ').map(n => n[0]).join('')}
-                        </div>
-                        <span style={{ fontWeight: 500 }}>{emp}</span>
-                      </div>
-                    ))}
-                    {['Ali Benali', 'Sara Hamidi', 'Karim Ouali', 'Nadia Benmoussa', 'Youssef Tazi', 'Emma Wilson', 'David Chen', 'Sarah Miller', 'Marcus Rowe'].filter(e => e.toLowerCase().includes(employeeSearch.toLowerCase())).length === 0 && (
-                      <div style={{ padding: '12px', fontSize: '0.85rem', color: 'var(--text-gray)', textAlign: 'center' }}>Aucun trouvé</div>
-                    )}
-                  </div>
-                </div>
-              )}
-            </div>
-            <div className="form-group" style={{ marginBottom: 0 }}>
-              <label className="form-label" style={{ fontSize: '0.7rem', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                <i className="fas fa-building" style={{ color: 'var(--c-orange)' }}></i> {t('absences.modal.department')}
-              </label>
-              <select name="dept" className="form-input" value={form.dept} onChange={handleFormChange}>
-                <option>Ingénierie</option>
-                <option>Marketing</option>
-                <option>Finance</option>
-                <option>RH</option>
+              <select name="employe_id" className="form-input" value={form.employe_id} onChange={handleFormChange} required>
+                <option value="">Sélectionner...</option>
+                {employes.map(e => (
+                  <option key={e.id} value={e.id}>{e.prenom} {e.nom}</option>
+                ))}
               </select>
             </div>
             <div className="form-group" style={{ marginBottom: 0 }}>
@@ -280,37 +252,38 @@ export default function Absences() {
                 <i className="fas fa-tag" style={{ color: 'var(--c-purple)' }}></i> {t('absences.modal.type')} *
               </label>
               <select name="type" className="form-input" value={form.type} onChange={handleFormChange}>
-                <option value="absence">{t('absences.modal.absence')}</option>
-                <option value="late">{t('absences.modal.late')}</option>
+                <option value="ABSENCE">{t('absences.modal.absence')}</option>
+                <option value="RETARD">{t('absences.modal.late')}</option>
               </select>
             </div>
             <div className="form-group" style={{ marginBottom: 0 }}>
               <label className="form-label" style={{ fontSize: '0.7rem', display: 'flex', alignItems: 'center', gap: '4px' }}>
                 <i className="fas fa-info-circle" style={{ color: 'var(--primary)' }}></i> {t('absences.modal.statusLabel')}
               </label>
-              <select name="status" className="form-input" value={form.status} onChange={handleFormChange}>
-                <option value="unjustified">{t('absences.status_values.unjustified')}</option>
-                <option value="justified">{t('absences.status_values.justified')}</option>
-                <option value="justifiedMedical">{t('absences.status_values.justifiedMedical')}</option>
+              <select name="statut" className="form-input" value={form.statut} onChange={handleFormChange}>
+                <option value="INJUSTIFIEE">{t('absences.status_values.unjustified')}</option>
+                <option value="JUSTIFIEE">{t('absences.status_values.justified')}</option>
+                <option value="EN_ATTENTE">{t('absences.status_values.inProgress')}</option>
               </select>
             </div>
+            <div className="form-group" style={{ marginBottom: 0 }}></div>
             <div className="form-group" style={{ marginBottom: 0 }}>
               <label className="form-label" style={{ fontSize: '0.7rem', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                <i className="far fa-calendar-alt" style={{ color: 'var(--success)' }}></i> {t('absences.modal.date')} *
+                <i className="far fa-calendar-alt" style={{ color: 'var(--success)' }}></i> {t('absences.modal.date')} * (début)
               </label>
-              <input type="date" name="date" className="form-input" value={form.date} onChange={handleFormChange} required />
+              <input type="date" name="dateDebut" className="form-input" value={form.dateDebut} onChange={handleFormChange} required />
             </div>
             <div className="form-group" style={{ marginBottom: 0 }}>
               <label className="form-label" style={{ fontSize: '0.7rem', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                <i className="fas fa-clock" style={{ color: '#E11D48' }}></i> {t('absences.modal.durationHours')}
+                <i className="far fa-calendar-check" style={{ color: 'var(--success)' }}></i> Date fin *
               </label>
-              <input type="number" name="hours" className="form-input" min="0.5" max="8" step="0.5" value={form.hours} onChange={handleFormChange} />
+              <input type="date" name="dateFin" className="form-input" value={form.dateFin} onChange={handleFormChange} required />
             </div>
             <div className="form-group" style={{ marginBottom: 0, gridColumn: '1/-1' }}>
               <label className="form-label" style={{ fontSize: '0.7rem', display: 'flex', alignItems: 'center', gap: '4px' }}>
                 <i className="fas fa-align-left" style={{ color: 'var(--text-gray)' }}></i> {t('absences.modal.reason')}
               </label>
-              <input type="text" name="reason" className="form-input" placeholder={t('absences.modal.reasonPlaceholder')} value={form.reason} onChange={handleFormChange} />
+              <input type="text" name="motif" className="form-input" placeholder={t('absences.modal.reasonPlaceholder')} value={form.motif} onChange={handleFormChange} />
             </div>
           </div>
           {form.status === 'unjustified' && form.type === 'absence' && (

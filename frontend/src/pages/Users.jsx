@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Modal from '../components/Modal';
 import Pagination from '../components/Pagination';
 import { motion } from 'framer-motion';
@@ -6,6 +6,7 @@ import { useToast } from '../context/ToastContext';
 import { useTranslation } from 'react-i18next';
 import { User, Mail, ShieldCheck, Key, Lock, AlertTriangle } from 'lucide-react';
 import { MOROCCAN_CITIES } from '../utils/cities';
+import { employeApi } from '../services/api';
 
 const Users = () => {
   const { showToast } = useToast();
@@ -22,18 +23,42 @@ const Users = () => {
   const [addForm, setAddForm] = useState({ name: '', email: '', role: 'EMPLOYEE', password: '', jobTitle: '', department: '', phone: '', hireDate: '', contractType: '', location: '' });
   const [editForm, setEditForm] = useState({ name: '', email: '', role: '', jobTitle: '', department: '', phone: '', hireDate: '', contractType: '', location: '' });
 
-  const defaultUsers = [
-    { 
-      id: 1, name: "Yassine Roummani", email: "yassine@company.com", role: "HR_MANAGER", status: "Actif", lastLogin: "Il y a 2h", initials: "YR", bg: "#2563EB",
-      jobTitle: "Directrice des Ressources Humaines", department: "Ressources Humaines", hireDate: "12 Janvier 2024", contractType: "CDI (Temps Plein)", phone: "+212 6 12 34 56 7777777777777", location: "Rabat, Maroc"
-    },
-    { id: 2, name: "Maria Chen", email: "maria.c@entreprise.com", role: "HR_AGENT", status: "Actif", lastLogin: "Hier", initials: "MC", bg: "#10B981" },
-    { id: 3, name: "David Miller", email: "david.m@entreprise.com", role: "DEPARTMENT_MANAGER", status: "Inactif", lastLogin: "Il y a 1 semaine", initials: "DM", bg: "#F59E0B" },
-    { id: 4, name: "Sarah Connor", email: "sarah.c@entreprise.com", role: "EMPLOYEE", status: "Actif", lastLogin: "Ce matin", initials: "SC", bg: "#9333EA" },
-    { id: 5, name: "John Doe", email: "john.doe@entreprise.com", role: "SECRETARY_GENERAL", status: "Actif", lastLogin: "Il y a 1j", initials: "JD", bg: "#DB2777" },
-  ];
+  const ROLE_COLORS = { HR_MANAGER: '#2563EB', HR_AGENT: '#10B981', DEPARTMENT_MANAGER: '#F59E0B', SECRETARY_GENERAL: '#DB2777', EMPLOYEE: '#9333EA' };
+  const SYMFONY_TO_FRONTEND = { ROLE_ADMIN_RH: 'HR_MANAGER', ROLE_AGENT_RH: 'HR_AGENT', ROLE_CHEF_SERVICE: 'DEPARTMENT_MANAGER', ROLE_SECRETAIRE_GENERALE: 'SECRETARY_GENERAL', ROLE_EMPLOYE: 'EMPLOYEE' };
+  const normaliseEmp = (e) => {
+    const name = `${e.prenom ?? ''} ${e.nom ?? ''}`.trim();
+    const roles = e.user?.roles ?? ['ROLE_EMPLOYE'];
+    const priorityRoles = ['ROLE_ADMIN_RH','ROLE_SECRETAIRE_GENERALE','ROLE_AGENT_RH','ROLE_CHEF_SERVICE','ROLE_EMPLOYE'];
+    const topRole = priorityRoles.find(r => roles.includes(r)) ?? 'ROLE_EMPLOYE';
+    const role = SYMFONY_TO_FRONTEND[topRole] ?? 'EMPLOYEE';
+    const bg = ROLE_COLORS[role] ?? '#2563EB';
+    return {
+      id: e.id,
+      name,
+      email: e.user?.email ?? '',
+      role,
+      status: e.statut === 'ACTIF' ? 'Actif' : 'Inactif',
+      lastLogin: '—',
+      initials: name.split(' ').map(n => n[0] ?? '').join('').substring(0, 2).toUpperCase(),
+      bg,
+      jobTitle: e.poste ?? '',
+      department: e.service?.nom ?? '',
+      phone: e.telephone ?? '',
+      hireDate: e.dateRecrutement ? e.dateRecrutement.substring(0, 10) : '',
+      contractType: '',
+      location: e.adresse ?? '',
+    };
+  };
 
-  const [users, setUsers] = useState(defaultUsers);
+  const [users, setUsers] = useState([]);
+  const [loadingList, setLoadingList] = useState(true);
+
+  useEffect(() => {
+    employeApi.list()
+      .then(r => setUsers((r.data?.data ?? r.data ?? []).map(normaliseEmp)))
+      .catch(() => {})
+      .finally(() => setLoadingList(false));
+  }, []);
   const [searchTerm, setSearchTerm] = useState('');
 
   const filteredUsers = users.filter(u => 
@@ -52,14 +77,17 @@ const Users = () => {
     'SECRETARY_GENERAL': 'Secrétaire Générale'
   };
 
-  const handleToggleStatus = (userId) => {
+  const handleToggleStatus = async (userId) => {
     const userToUpdate = users.find(u => u.id === userId);
     if (!userToUpdate) return;
-    
-    setUsers(prev => prev.map(u => 
-      u.id === userId ? { ...u, status: u.status === 'Actif' ? 'Inactif' : 'Actif' } : u
-    ));
-    showToast(t('users.toast.updated', { name: userToUpdate.name }), 'success');
+    const newStatut = userToUpdate.status === 'Actif' ? 'INACTIF' : 'ACTIF';
+    try {
+      await employeApi.update(userId, { statut: newStatut });
+      setUsers(prev => prev.map(u =>
+        u.id === userId ? { ...u, status: u.status === 'Actif' ? 'Inactif' : 'Actif' } : u
+      ));
+      showToast(t('users.toast.updated', { name: userToUpdate.name }), 'success');
+    } catch { showToast('Erreur mise à jour statut', 'error'); }
   };
 
   const handleAction = (type, user) => {
@@ -76,40 +104,53 @@ const Users = () => {
     if (type === 'delete') setIsDeleteModalOpen(true);
   };
 
-  const onAddSubmit = (e) => {
+  const FRONTEND_TO_SYMFONY = { HR_MANAGER: 'ROLE_ADMIN_RH', HR_AGENT: 'ROLE_AGENT_RH', DEPARTMENT_MANAGER: 'ROLE_CHEF_SERVICE', SECRETARY_GENERAL: 'ROLE_SECRETAIRE_GENERALE', EMPLOYEE: 'ROLE_EMPLOYE' };
+  const onAddSubmit = async (e) => {
     e.preventDefault();
-    const newUser = {
-      id: Date.now(),
-      name: addForm.name,
-      email: addForm.email,
-      role: addForm.role,
-      jobTitle: addForm.jobTitle,
-      department: addForm.department,
-      phone: addForm.phone,
-      hireDate: addForm.hireDate,
-      contractType: addForm.contractType,
-      location: addForm.location,
-      status: 'Actif',
-      lastLogin: 'Jamais',
-      initials: addForm.name.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase(),
-      bg: '#2563EB'
-    };
-    setUsers(prev => [newUser, ...prev]);
-    showToast(t('users.toast.created', { name: newUser.name }), 'success');
-    setIsAddModalOpen(false);
-    setAddForm({ name: '', email: '', role: 'EMPLOYEE', password: '', jobTitle: '', department: '', phone: '', hireDate: '', contractType: '', location: '' });
+    try {
+      const nameParts = addForm.name.trim().split(' ');
+      const prenom = nameParts[0] ?? '';
+      const nom = nameParts.slice(1).join(' ') || prenom;
+      const symRole = FRONTEND_TO_SYMFONY[addForm.role] ?? 'ROLE_EMPLOYE';
+      const payload = { prenom, nom, email: addForm.email, poste: addForm.jobTitle, telephone: addForm.phone, adresse: addForm.location, statut: 'ACTIF', password: addForm.password, roles: [symRole] };
+      if (addForm.hireDate) payload.dateRecrutement = addForm.hireDate;
+      const r = await employeApi.create(payload);
+      const newUser = normaliseEmp(r.data?.data ?? r.data);
+      setUsers(prev => [newUser, ...prev]);
+      showToast(t('users.toast.created', { name: newUser.name }), 'success');
+      setIsAddModalOpen(false);
+      setAddForm({ name: '', email: '', role: 'EMPLOYEE', password: '', jobTitle: '', department: '', phone: '', hireDate: '', contractType: '', location: '' });
+    } catch (err) {
+      showToast(err.response?.data?.message ?? 'Erreur lors de la création', 'error');
+    }
   };
 
-  const onEditSubmit = (e) => {
+  const onEditSubmit = async (e) => {
     e.preventDefault();
-    setUsers(prev => prev.map(u => u.id === selectedUser.id ? { ...u, ...editForm } : u));
-    showToast(t('users.toast.updated', { name: editForm.name }), 'success');
-    setIsEditModalOpen(false);
+    try {
+      const nameParts = editForm.name.trim().split(' ');
+      const prenom = nameParts[0] ?? '';
+      const nom = nameParts.slice(1).join(' ') || prenom;
+      const payload = { prenom, nom, poste: editForm.jobTitle, telephone: editForm.phone, adresse: editForm.location };
+      if (editForm.hireDate) payload.dateRecrutement = editForm.hireDate;
+      const r = await employeApi.update(selectedUser.id, payload);
+      const updated = normaliseEmp(r.data?.data ?? r.data);
+      setUsers(prev => prev.map(u => u.id === selectedUser.id ? updated : u));
+      showToast(t('users.toast.updated', { name: editForm.name }), 'success');
+      setIsEditModalOpen(false);
+    } catch (err) {
+      showToast(err.response?.data?.message ?? 'Erreur lors de la mise à jour', 'error');
+    }
   };
 
-  const onDeleteSubmit = () => {
-    setUsers(prev => prev.filter(u => u.id !== selectedUser.id));
-    showToast(t('users.toast.deleted'), 'error');
+  const onDeleteSubmit = async () => {
+    try {
+      await employeApi.delete(selectedUser.id);
+      setUsers(prev => prev.filter(u => u.id !== selectedUser.id));
+      showToast(t('users.toast.deleted'), 'error');
+    } catch (err) {
+      showToast(err.response?.data?.message ?? 'Erreur lors de la suppression', 'error');
+    }
     setIsDeleteModalOpen(false);
   };
 
@@ -152,7 +193,9 @@ const Users = () => {
               </tr>
             </thead>
             <tbody>
-              {paginated.length === 0 ? (
+              {loadingList ? (
+                <tr><td colSpan="6" style={{ textAlign: 'center', padding: '40px', color: 'var(--text-gray)' }}><i className="fas fa-spinner fa-spin" style={{ marginRight: 8 }}></i> Chargement...</td></tr>
+              ) : paginated.length === 0 ? (
                 <tr>
                   <td colSpan="6" style={{ textAlign: 'center', padding: '40px', color: 'var(--text-gray)' }}>
                     {t('users.table.noData')}
