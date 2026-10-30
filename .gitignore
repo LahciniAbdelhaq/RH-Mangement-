@@ -13,3 +13,8 @@
 /public/assets/
 /assets/vendor/
 ###< symfony/asset-mapper ###
+node_modules/
+.venv/
+venv/
+__pycache__/
+/frontend/.next/dev/cache/turbopack/ee6e79b1/00000031.sst
